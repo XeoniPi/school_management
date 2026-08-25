@@ -506,12 +506,12 @@
   /* ─────────────────────────────────────────
      17. GALLERY LIGHTBOX (open in new tab)
   ───────────────────────────────────────── */
-  document.querySelectorAll('.gallery-item').forEach(function (item) {
-    item.addEventListener('click', function () {
-      var img = item.querySelector('img');
-      if (img) { window.open(img.src, '_blank'); }
-    });
-  });
+  // document.querySelectorAll('.gallery-item').forEach(function (item) {
+  //   item.addEventListener('click', function () {
+  //     var img = item.querySelector('img');
+  //     if (img) { window.open(img.src, '_blank'); }
+  //   });
+  // });
 
   /* ─────────────────────────────────────────
      18. FORM VALIDATION HELPER

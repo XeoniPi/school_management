@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 24, 2026 at 09:03 PM
+-- Generation Time: Aug 25, 2026 at 10:06 AM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -252,10 +252,21 @@ CREATE TABLE `exam_schedules` (
   `time_end` time DEFAULT NULL,
   `full_marks` smallint(6) DEFAULT NULL,
   `mark_type` enum('full','half','oral','practical') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'full',
+  `class_id` int(10) UNSIGNED NOT NULL,
+  `notes` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `year` smallint(6) NOT NULL DEFAULT '2026',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `sort_order` tinyint(4) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `exam_schedules`
+--
+
+INSERT INTO `exam_schedules` (`id`, `exam_type`, `exam_date`, `day_name`, `subject_id`, `subject_label`, `time_start`, `time_end`, `full_marks`, `mark_type`, `class_id`, `notes`, `year`, `is_active`, `sort_order`) VALUES
+(1, 'first_term', '2026-03-10', NULL, 1, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 1),
+(2, 'first_term', '2026-03-11', NULL, 2, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 2),
+(3, 'first_term', '2026-03-12', NULL, 3, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 3);
 
 -- --------------------------------------------------------
 
@@ -498,7 +509,9 @@ ALTER TABLE `downloads`
 --
 ALTER TABLE `exam_schedules`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `subject_id` (`subject_id`);
+  ADD KEY `idx_exam_type` (`exam_type`),
+  ADD KEY `idx_class_id` (`class_id`),
+  ADD KEY `idx_subject_id` (`subject_id`);
 
 --
 -- Indexes for table `gallery`
@@ -596,7 +609,7 @@ ALTER TABLE `downloads`
 -- AUTO_INCREMENT for table `exam_schedules`
 --
 ALTER TABLE `exam_schedules`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `gallery`
@@ -664,7 +677,8 @@ ALTER TABLE `downloads`
 -- Constraints for table `exam_schedules`
 --
 ALTER TABLE `exam_schedules`
-  ADD CONSTRAINT `exam_schedules_ibfk_1` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `exam_schedules_ibfk_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `exam_schedules_ibfk_subject` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `gallery`

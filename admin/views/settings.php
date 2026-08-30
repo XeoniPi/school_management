@@ -15,20 +15,20 @@ $pageTitle = 'সেটিংস | KMA Admin';
 $flash = ''; $flashType = 'success'; $errors = [];
 
 /* Load all settings into a key=>value map */
-$allSettings = $pdo->query('SELECT setting_key, setting_value FROM site_settings')->fetchAll();
+$allSettings = $pdo->query('SELECT key_name, value FROM site_settings')->fetchAll();
 $s = [];
 foreach ($allSettings as $row) {
-    $s[$row['setting_key']] = $row['setting_value'];
+    $s[$row['key_name']] = $row['value'];
 }
 
-/* Helper: upsert a setting */
+/* Helper: upsert a setting (key_name is the primary key — no separate id column) */
 function saveSetting($pdo, $key, $value) {
-    $chk = $pdo->prepare('SELECT id FROM site_settings WHERE setting_key=?');
+    $chk = $pdo->prepare('SELECT key_name FROM site_settings WHERE key_name=?');
     $chk->execute([$key]);
     if ($chk->fetch()) {
-        $pdo->prepare('UPDATE site_settings SET setting_value=? WHERE setting_key=?')->execute([$value, $key]);
+        $pdo->prepare('UPDATE site_settings SET value=? WHERE key_name=?')->execute([$value, $key]);
     } else {
-        $pdo->prepare('INSERT INTO site_settings (setting_key, setting_value) VALUES (?,?)')->execute([$key, $value]);
+        $pdo->prepare('INSERT INTO site_settings (key_name, value) VALUES (?,?)')->execute([$key, $value]);
     }
 }
 
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'school_name_bn','school_name_en','school_tagline',
                 'school_phone','school_phone2','school_email','school_email2',
                 'school_address','school_map_url',
-                'school_hours','admission_open',
+                'office_hours','admission_open',
                 'footer_text','meta_description',
             ];
             foreach ($fields as $fk) {
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($pa === 'save_social') {
-            $socials = ['facebook_url','youtube_url','whatsapp_number','instagram_url'];
+            $socials = ['school_facebook','school_youtube','school_whatsapp','school_instagram'];
             foreach ($socials as $fk) {
                 $val = sanitize(isset($_POST[$fk]) ? $_POST[$fk] : '');
                 saveSetting($pdo, $fk, $val);
@@ -79,11 +79,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $confirmPwd = isset($_POST['confirm_password']) ? $_POST['confirm_password'] : '';
 
             $adminId = (int)$_SESSION['admin_id'];
-            $row = $pdo->prepare('SELECT password_hash FROM admin_users WHERE id=?');
+            $row = $pdo->prepare('SELECT password FROM admin_users WHERE id=?');
             $row->execute([$adminId]);
             $admin = $row->fetch();
 
-            if (!$admin || !password_verify($currentPwd, $admin['password_hash'])) {
+            if (!$admin || !password_verify($currentPwd, $admin['password'])) {
                 $errors[] = 'বর্তমান পাসওয়ার্ড সঠিক নয়।'; $flashType = 'error';
             } elseif (mb_strlen($newPwd) < 8) {
                 $errors[] = 'নতুন পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।'; $flashType = 'error';
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'নিশ্চিত পাসওয়ার্ড মেলেনি।'; $flashType = 'error';
             } else {
                 $hash = password_hash($newPwd, PASSWORD_BCRYPT);
-                $pdo->prepare('UPDATE admin_users SET password_hash=? WHERE id=?')->execute([$hash, $adminId]);
+                $pdo->prepare('UPDATE admin_users SET password=? WHERE id=?')->execute([$hash, $adminId]);
                 $flash = 'পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে।';
                 header('Location: ' . BASE_URL . '/admin/views/settings.php?tab=password&flash=' . urlencode($flash)); exit;
             }
@@ -205,7 +205,7 @@ function sv($s, $key, $default = '') { return isset($s[$key]) ? $s[$key] : $defa
         </div>
         <div>
           <label class="form-label">অফিস সময়</label>
-          <input type="text" name="school_hours" class="form-input" value="<?php echo h(sv($s,'school_hours')); ?>" placeholder="শনি–বৃহস্পতি: সকাল ৮:০০ – দুপুর ১:৩০"/>
+          <input type="text" name="office_hours" class="form-input" value="<?php echo h(sv($s,'office_hours')); ?>" placeholder="শনি–বৃহস্পতি: সকাল ৮:০০ – দুপুর ১:৩০"/>
         </div>
         <div>
           <label class="form-label">Google Maps Embed URL</label>
@@ -282,10 +282,10 @@ function sv($s, $key, $default = '') { return isset($s[$key]) ? $s[$key] : $defa
     <div class="space-y-4">
       <?php
       $socials = [
-        ['facebook_url',     'bi-facebook text-blue-600',  'ফেসবুক পেজ URL',    'https://www.facebook.com/...'],
-        ['youtube_url',      'bi-youtube text-red-600',    'ইউটিউব চ্যানেল URL', 'https://www.youtube.com/...'],
-        ['whatsapp_number',  'bi-whatsapp text-green-600', 'WhatsApp নম্বর',      '+8801866751015'],
-        ['instagram_url',    'bi-instagram text-pink-600', 'ইনস্টাগ্রাম URL',    'https://www.instagram.com/...'],
+        ['school_facebook',  'bi-facebook text-blue-600',  'ফেসবুক পেজ URL',    'https://www.facebook.com/...'],
+        ['school_youtube',   'bi-youtube text-red-600',    'ইউটিউব চ্যানেল URL', 'https://www.youtube.com/...'],
+        ['school_whatsapp',  'bi-whatsapp text-green-600', 'WhatsApp নম্বর',      '+8801866751015'],
+        ['school_instagram', 'bi-instagram text-pink-600', 'ইনস্টাগ্রাম URL',    'https://www.instagram.com/...'],
       ];
       foreach ($socials as $soc): ?>
       <div>
@@ -351,6 +351,9 @@ $admins = $pdo->query('SELECT id, username, full_name, email, role, is_active, l
   <div class="admin-card overflow-hidden">
     <div class="flex items-center justify-between px-5 py-4 border-b border-kma-border dark:border-gray-700">
       <h2 class="text-sm font-bold text-kma-dark dark:text-white"><i class="bi bi-people-fill text-accent mr-1"></i> অ্যাডমিন ব্যবহারকারী</h2>
+      <?php if (($_SESSION['admin_role'] ?? '') === 'super_admin'): ?>
+      <a href="<?php echo BASE_URL; ?>/admin/register.php" class="btn-primary text-xs py-1.5 px-3"><i class="bi bi-plus-lg"></i> নতুন অ্যাডমিন</a>
+      <?php endif; ?>
     </div>
     <?php if (empty($admins)): ?>
     <div class="py-8 text-center text-kma-muted text-sm">কোনো ব্যবহারকারী নেই</div>

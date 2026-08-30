@@ -170,12 +170,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
     <!-- Month-wise accordion -->
     <div class="space-y-3 reveal" id="calAccordion">
-      <?php foreach ($byMonth as $m => $mHolidays): ?>
-      <?php $accId = 'cal-month-'.$m; $isFirst = ($m === array_key_first($byMonth)); ?>
+      <?php $isFirstMonth = true; foreach ($byMonth as $m => $mHolidays): ?>
+      <?php $accId = 'cal-month-'.$m; $isFirst = $isFirstMonth; $isFirstMonth = false; ?>
       <div class="bg-kma-bg dark:bg-gray-700 rounded-xl overflow-hidden shadow-sm">
         <!-- Month header -->
         <button type="button"
-                onclick="toggleAcc('<?php echo $accId; ?>')"
+                data-acc-toggle="<?php echo $accId; ?>"
                 class="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-kma-border/30 dark:hover:bg-gray-600 transition-colors"
                 aria-expanded="<?php echo $isFirst ? 'true' : 'false'; ?>">
           <i class="bi bi-calendar-month text-accent"></i>
@@ -191,14 +191,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             $start = date('d', strtotime($hol['start_date']));
             $end   = !empty($hol['end_date']) && $hol['end_date'] !== $hol['start_date']
                      ? '–'.date('d', strtotime($hol['end_date'])) : '';
-            $dur   = '';
-            if (!empty($hol['duration_days']) && $hol['duration_days'] > 1) {
-                $dur = $hol['duration_days'].' দিন';
-            } elseif ($end) {
-                $dur = 'একাধিক দিন';
-            } else {
-                $dur = '১ দিন';
-            }
+            $dur   = !empty($hol['duration']) ? $hol['duration'] : ($end ? 'একাধিক দিন' : '১ দিন');
           ?>
           <div class="flex items-start gap-4 px-5 py-3.5 border-t border-kma-border dark:border-gray-600 hover:bg-white dark:hover:bg-gray-800 transition-colors">
             <!-- Date pill -->
@@ -269,22 +262,6 @@ require_once dirname(__DIR__) . '/includes/header.php';
   </div>
 </section>
 
-<script>
-function toggleAcc(id) {
-  var body  = document.getElementById(id);
-  var btn   = body ? body.previousElementSibling : null;
-  var arrow = btn ? btn.querySelector('.acc-arrow') : null;
-  if (!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if (btn)   btn.setAttribute('aria-expanded', open ? 'false' : 'true');
-  if (arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
-}
-/* Open first month arrow on load */
-document.addEventListener('DOMContentLoaded', function() {
-  var first = document.querySelector('.acc-arrow');
-  if (first) first.style.transform = 'rotate(180deg)';
-});
-</script>
+<script src="<?php echo BASE_URL; ?>/assets/js/accordion.js"></script>
 
 <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>

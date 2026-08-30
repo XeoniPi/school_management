@@ -504,14 +504,11 @@
   }
 
   /* ─────────────────────────────────────────
-     17. GALLERY LIGHTBOX (open in new tab)
+     17. (n/a) — gallery clicks are handled by the
+     in-page modal lightbox defined inline on
+     index.php / pages/gallery.php. Never opens a
+     new tab.
   ───────────────────────────────────────── */
-  // document.querySelectorAll('.gallery-item').forEach(function (item) {
-  //   item.addEventListener('click', function () {
-  //     var img = item.querySelector('img');
-  //     if (img) { window.open(img.src, '_blank'); }
-  //   });
-  // });
 
   /* ─────────────────────────────────────────
      18. FORM VALIDATION HELPER

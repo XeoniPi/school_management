@@ -448,20 +448,23 @@ require_once dirname(__DIR__) . '/includes/header.php';
       <p class="text-kma-muted text-sm mt-1">বাংলাদেশ সরকারি ছুটি ও বিদ্যালয়ের বার্ষিক ক্যালেন্ডার</p>
     </div>
 
-    <!-- Legend -->
-    <div class="flex flex-wrap gap-3 justify-center mb-6 reveal">
+    <!-- Legend (click to filter) -->
+    <div class="flex flex-wrap gap-3 justify-center mb-6 reveal" id="holidayLegend" role="group" aria-label="ছুটির ধরন অনুযায়ী ফিল্টার">
+      <button type="button" class="leg-item active flex items-center gap-2 text-xs text-kma-muted font-semibold bg-white dark:bg-gray-700 border border-kma-border px-3 py-1.5 rounded-full shadow-sm" data-filter="all" aria-pressed="true">
+        <span class="w-3 h-3 rounded-sm border bg-kma-dark border-kma-dark"></span> সব দেখুন
+      </button>
       <?php
       $legends = [
-        ['bg-red-100 border-red-300','সরকারি ছুটি'],
-        ['bg-green-100 border-green-300','বিদ্যালয় ছুটি'],
-        ['bg-yellow-100 border-yellow-300','পরীক্ষা'],
-        ['bg-purple-100 border-purple-300','বিশেষ অনুষ্ঠান'],
+        ['govt',   'bg-red-100 border-red-300',    'সরকারি ছুটি'],
+        ['school', 'bg-green-100 border-green-300','বিদ্যালয় ছুটি'],
+        ['exam',   'bg-yellow-100 border-yellow-300','পরীক্ষা'],
+        ['event',  'bg-purple-100 border-purple-300','বিশেষ অনুষ্ঠান'],
       ];
       foreach ($legends as $lg): ?>
-      <div class="flex items-center gap-2 text-xs text-kma-muted font-semibold bg-white dark:bg-gray-700 border border-kma-border px-3 py-1.5 rounded-full shadow-sm">
-        <span class="w-3 h-3 rounded-sm border <?php echo h($lg[0]); ?>"></span>
-        <?php echo h($lg[1]); ?>
-      </div>
+      <button type="button" class="leg-item flex items-center gap-2 text-xs text-kma-muted font-semibold bg-white dark:bg-gray-700 border border-kma-border px-3 py-1.5 rounded-full shadow-sm" data-filter="<?php echo h($lg[0]); ?>" aria-pressed="false">
+        <span class="w-3 h-3 rounded-sm border <?php echo h($lg[1]); ?>"></span>
+        <?php echo h($lg[2]); ?>
+      </button>
       <?php endforeach; ?>
     </div>
 
@@ -491,24 +494,28 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
     if (empty($byMonth)): ?>
     <div class="text-center text-kma-muted py-8 text-sm">ছুটির তালিকা পাওয়া যায়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।</div>
-    <?php else:
+    <?php else: ?>
+    <div id="holidayAccordion">
+    <?php
     foreach ($byMonth as $m => $mHols):
       $mn = isset($monthNames[$m]) ? $monthNames[$m] : $m;
     ?>
-    <div class="reveal mb-2 rounded-xl overflow-hidden shadow-sm border border-kma-border">
-      <button class="w-full flex items-center justify-between px-5 py-4 bg-kma-bg dark:bg-gray-700 font-bold text-sm text-kma-dark dark:text-white hover:bg-accent hover:text-white transition-colors group"
-              onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('.acc-icon').classList.toggle('rotate-180')">
+    <div class="holiday-month reveal mb-2 rounded-xl overflow-hidden shadow-sm border border-kma-border">
+      <button type="button" class="holiday-month-toggle w-full flex items-center justify-between px-5 py-4 bg-kma-bg dark:bg-gray-700 font-bold text-sm text-kma-dark dark:text-white hover:bg-accent hover:text-white transition-colors group">
         <span class="flex items-center gap-2"><i class="bi bi-calendar-month text-accent group-hover:text-white"></i> <?php echo h($mn); ?> ২০২৬</span>
-        <i class="bi bi-chevron-down acc-icon transition-transform text-kma-muted group-hover:text-white"></i>
+        <span class="flex items-center gap-2">
+          <span class="holiday-month-count text-xs bg-white/70 group-hover:bg-white/20 text-kma-dark group-hover:text-white px-2 py-0.5 rounded-full font-bold"><?php echo count($mHols); ?></span>
+          <i class="bi bi-chevron-down acc-icon transition-transform text-kma-muted group-hover:text-white"></i>
+        </span>
       </button>
-      <div class="hidden bg-white dark:bg-gray-800">
+      <div class="holiday-month-body hidden bg-white dark:bg-gray-800">
         <?php foreach ($mHols as $hol):
           $dt  = new DateTime($hol['start_date']);
           $day = $dt->format('d');
           $typeCss = holidayTypeTailwind($hol['type']);
           $typeLabel = holidayTypeLabel($hol['type']);
         ?>
-        <div class="flex items-start gap-4 px-5 py-3.5 border-b border-kma-border last:border-0 hover:bg-kma-bg dark:hover:bg-gray-700 transition-colors">
+        <div class="holiday-row flex items-start gap-4 px-5 py-3.5 border-b border-kma-border last:border-0 hover:bg-kma-bg dark:hover:bg-gray-700 transition-colors" data-type="<?php echo h($hol['type']); ?>">
           <div class="bg-accent text-white rounded-lg text-center px-2 py-1.5 flex-shrink-0 min-w-[52px]">
             <span class="block font-display text-xl font-bold leading-none"><?php echo h($day); ?></span>
             <span class="text-[0.65rem] font-semibold"><?php echo h($mn); ?></span>
@@ -529,8 +536,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <?php endforeach; ?>
       </div>
     </div>
-    <?php endforeach;
-    endif; ?>
+    <?php endforeach; ?>
+    </div>
+    <p id="holidayNoResults" class="hidden text-center text-kma-muted text-sm py-8">এই ধরনের কোনো ছুটি নেই।</p>
+    <?php endif; ?>
 
   </div>
 </section>
@@ -538,6 +547,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 </main>
 
 <!-- CTA -->
+<script src="<?php echo BASE_URL; ?>/assets/js/academics-tabs.js"></script>
 <section class="cta-section">
   <div class="max-w-7xl mx-auto px-4 reveal text-center">
     <div class="ornament mb-3"><span style="background:rgba(255,255,255,.3)"></span><i class="bi bi-mortarboard-fill"></i><span style="background:rgba(255,255,255,.3)"></span></div>

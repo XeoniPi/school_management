@@ -76,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         @unlink(UPLOAD_PDFS . $dl['file_path']);
                     }
                     $dl['file_path'] = $fname;
+                    $dl['file_name'] = sanitize($file['name']);
+                    $dl['file_type'] = $ext !== '' ? $ext : 'pdf';
                     $dl['file_size'] = round($file['size'] / 1024) . ' KB';
                 }
             }
@@ -84,13 +86,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pa === 'add' && empty($dl['file_path'])) { $errors[] = 'ফাইল আপলোড করুন।'; }
 
             if (empty($errors)) {
-                $cols = 'title,description,category,class_id,file_path,file_size,is_active';
-                $vals = [$dl['title'],$dl['description'],$dl['category'],
-                         $dl['class_id'],$dl['file_path'],$dl['file_size'],$dl['is_active']];
                 if ($pa === 'add') {
-                    $pdo->prepare("INSERT INTO downloads ($cols) VALUES (?,?,?,?,?,?,?)")->execute($vals);
+                    $cols = 'title,description,category,class_id,file_path,file_name,file_type,file_size,is_active,uploaded_by';
+                    $vals = [$dl['title'],$dl['description'],$dl['category'],$dl['class_id'],
+                             $dl['file_path'],
+                             isset($dl['file_name']) ? $dl['file_name'] : $dl['file_path'],
+                             isset($dl['file_type']) ? $dl['file_type'] : 'pdf',
+                             $dl['file_size'],$dl['is_active'], (int)$_SESSION['admin_id']];
+                    $pdo->prepare("INSERT INTO downloads ($cols) VALUES (?,?,?,?,?,?,?,?,?,?)")->execute($vals);
                     $flash = 'ফাইল সফলভাবে যোগ করা হয়েছে।';
                 } else {
+                    $vals = [$dl['title'],$dl['description'],$dl['category'],
+                             $dl['class_id'],$dl['file_path'],$dl['file_size'],$dl['is_active']];
                     $vals[] = $eid;
                     $pdo->prepare('UPDATE downloads SET title=?,description=?,category=?,class_id=?,file_path=?,file_size=?,is_active=? WHERE id=?')->execute($vals);
                     $flash = 'ফাইল আপডেট হয়েছে।';

@@ -42,8 +42,6 @@ if ($search !== '') {
 }
 
 /* Count */
-$total    = (int)$pdo->prepare("SELECT COUNT(*) FROM contact_messages WHERE $where")->execute($params) ?
-            $pdo->prepare("SELECT COUNT(*) FROM contact_messages WHERE $where")->execute($params) && 0 : 0;
 $countStmt = $pdo->prepare("SELECT COUNT(*) FROM contact_messages WHERE $where");
 $countStmt->execute($params);
 $total    = (int)$countStmt->fetchColumn();

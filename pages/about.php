@@ -8,6 +8,37 @@ require_once dirname(__DIR__) . '/config/app.php';
 $pageTitle = 'আমাদের সম্পর্কে | খলিলুল্লাহ মেমোরিয়াল একাডেমি';
 $pageDesc  = 'বিদ্যালয়ের ইতিহাস, লক্ষ্য-উদ্দেশ্য ও শিক্ষকমণ্ডলী সম্পর্কে জানুন।';
 
+/* ── Faculty / staff directory (admin-controlled) ── */
+$facultyCats = [
+    'administration' => 'প্রশাসন',
+    'teacher'        => 'শিক্ষকমণ্ডলী',
+    'staff'          => 'সহায়ক স্টাফ',
+];
+$facultyList = [];
+try {
+    $facultyList = getDB()->query(
+        'SELECT * FROM faculty WHERE is_active = 1 ORDER BY category, sort_order ASC, name_bn ASC'
+    )->fetchAll();
+} catch (Exception $e) { $facultyList = []; }
+
+/* Reshape into a JSON payload for the modal — no extra AJAX round-trip needed */
+$facultyJson = [];
+foreach ($facultyList as $fm) {
+    $facultyJson[(int) $fm['id']] = [
+        'name_bn'     => h($fm['name_bn']),
+        'name_en'     => h($fm['name_en']),
+        'designation' => h($fm['designation']),
+        'category'    => h(isset($facultyCats[$fm['category']]) ? $facultyCats[$fm['category']] : $fm['category']),
+        'education'   => h($fm['education']),
+        'experience'  => h($fm['experience']),
+        'email'       => h($fm['email']),
+        'phone'       => h($fm['phone']),
+        'portfolio'   => h($fm['portfolio_url']),
+        'bio'         => nl2br(h($fm['bio'])),
+        'photo'       => !empty($fm['photo_path']) ? UPLOAD_IMAGES_URL . h($fm['photo_path']) : '',
+    ];
+}
+
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 <script>var BASE_URL = '<?php echo BASE_URL; ?>';</script>
@@ -188,43 +219,126 @@ require_once dirname(__DIR__) . '/includes/header.php';
 <!-- ── Faculty ── -->
 <section class="py-20 bg-white dark:bg-gray-800">
   <div class="max-w-7xl mx-auto px-4">
-    <div class="text-center title-center mb-12 reveal">
+    <div class="text-center title-center mb-8 reveal">
       <div class="ornament"><span></span><i class="bi bi-people-fill"></i><span></span></div>
       <h2 class="section-title">শিক্ষক ও প্রশাসন</h2>
-      <p class="text-kma-muted text-sm mt-2">আমাদের অভিজ্ঞ ও নিবেদিতপ্রাণ দল</p>
+      <p class="text-kma-muted text-sm mt-2">আমাদের অভিজ্ঞ ও নিবেদিতপ্রাণ শিক্ষকমণ্ডলী</p>
     </div>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <?php
-      $staff = [
-        ['https://scontent.fdac41-2.fna.fbcdn.net/v/t39.30808-6/492481134_3660657364174905_3838434338311209740_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=127cfc&_nc_ohc=1PvI5KgYOF4Q7kNvwGstLXv&_nc_zt=23&_nc_ht=scontent.fdac41-2.fna&oh=00_Af4K58VNGcrsmKjQkY11J4f2fOWOk2UJuxM7eozfPeltLA&oe=6A164A07','এডভোকেট মো. হারুনউর রশিদ হারুন','মালিক ও প্রতিষ্ঠাতা','এল.এল.বি, এলএলএম','administration'],
-        ['https://scontent.fdac41-2.fna.fbcdn.net/v/t39.30808-6/536010067_3747105478931463_8510761137296571616_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=3tu2VIG-ZBwQ7kNvwEbPr6y&_nc_zt=23&_nc_ht=scontent.fdac41-2.fna&oh=00_Af4ki55NtRtDDFdRNqq25nGdaABagyfQzEvX6I6R3Zog9w&oe=6A164C56','আব্দুর রহমান রকি','মালিক ও প্রতিষ্ঠাতা','বিএসসি ইন সিএসই','administration'],
-        ['https://scontent.fdac41-1.fna.fbcdn.net/v/t39.30808-6/514884732_4227713767481204_665926271554994724_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=VELHQy-I3-cQ7kNvwHH9qZZ&_nc_zt=23&_nc_ht=scontent.fdac41-1.fna&oh=00_Af4mPec5T2pmtR5HpiJRDlL7kdTEBGREcNy1NDzGiUVZcw&oe=6A167A89','মো. মহিন উদ্দিন','প্রধান শিক্ষক','বাংলা, ইংরেজি, গণিত, আরবি','teacher'],
-        ['https://scontent.fdac41-2.fna.fbcdn.net/v/t1.6435-9/116349197_1220142081666429_8946123292666278940_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=a5f93a&_nc_ohc=B-g483MLNIIQ7kNvwHVtyKT&_nc_zt=23&_nc_ht=scontent.fdac41-2.fna&oh=00_Af5vMrjH6vWmBq9AFXH_6RTEN-cV5_yfZD2-DBlsbMG9mg&oe=6A37E440','মো. আনোয়ার হোসেন পারভেজ','প্রতিষ্ঠাতা','বি.এ (ট্যুরিজম)','administration'],
-      ];
-      foreach ($staff as $idx => $s): ?>
-      <div class="reveal reveal-d<?php echo min($idx+1,5); ?> bg-kma-bg dark:bg-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-2 transition-all duration-300">
+
+    <?php if (empty($facultyList)): ?>
+    <div class="text-center py-14 text-kma-muted dark:text-gray-400 reveal">
+      <i class="bi bi-people text-5xl block mb-4 opacity-30"></i>
+      <p class="text-sm">এখনো কোনো সদস্যের তথ্য যোগ করা হয়নি।</p>
+    </div>
+    <?php else: ?>
+
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap gap-2 justify-center mb-10 reveal" role="tablist" aria-label="বিভাগ ফিল্টার">
+      <button class="faculty-filter-btn active" data-filter="all" role="tab" aria-selected="true">সবাই</button>
+      <?php foreach ($facultyCats as $ck => $cl): ?>
+      <button class="faculty-filter-btn" data-filter="<?php echo h($ck); ?>" role="tab" aria-selected="false"><?php echo h($cl); ?></button>
+      <?php endforeach; ?>
+    </div>
+
+    <!-- Faculty grid -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6" id="facultyGrid">
+      <?php foreach ($facultyList as $idx => $s):
+        $photo = !empty($s['photo_path']) ? UPLOAD_IMAGES_URL . h($s['photo_path']) : 'https://placehold.co/300x300/e8f4eb/2e6b3e?text=' . urlencode(mb_substr($s['name_bn'],0,1));
+        $catLabel = isset($facultyCats[$s['category']]) ? $facultyCats[$s['category']] : $s['category'];
+      ?>
+      <button type="button"
+              class="faculty-card reveal reveal-d<?php echo min($idx+1,5); ?> bg-kma-bg dark:bg-gray-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-2 transition-all duration-300 text-left"
+              data-category="<?php echo h($s['category']); ?>"
+              data-faculty-id="<?php echo (int)$s['id']; ?>"
+              aria-haspopup="dialog">
         <div class="relative overflow-hidden" style="aspect-ratio:1">
-          <img src="<?php echo h($s[0]); ?>" alt="<?php echo h($s[1]); ?>"
-               class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" loading="lazy" />
+          <img src="<?php echo $photo; ?>" alt="<?php echo h($s['name_bn']); ?>"
+               class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" loading="lazy"
+               onerror="this.src='https://placehold.co/300x300/e8f4eb/2e6b3e?text=No+Photo'" />
           <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8">
-            <span class="text-xs font-bold bg-gold text-kma-dark px-2 py-0.5 rounded"><?php echo h($s[4] === 'administration' ? 'প্রশাসন' : 'শিক্ষক'); ?></span>
+            <span class="text-xs font-bold bg-gold text-kma-dark px-2 py-0.5 rounded"><?php echo h($catLabel); ?></span>
           </div>
         </div>
         <div class="p-4">
-          <div class="font-bold text-kma-dark dark:text-white text-sm mb-0.5"><?php echo h($s[1]); ?></div>
+          <div class="font-bold text-kma-dark dark:text-white text-sm mb-0.5"><?php echo h($s['name_bn']); ?></div>
           <div class="text-accent text-xs font-semibold mb-2 flex items-center gap-1">
-            <i class="bi bi-patch-check-fill"></i> <?php echo h($s[2]); ?>
+            <i class="bi bi-patch-check-fill"></i> <?php echo h($s['designation']); ?>
           </div>
+          <?php if (!empty($s['education'])): ?>
           <div class="text-kma-muted text-xs flex items-start gap-1">
             <i class="bi bi-mortarboard-fill text-accent mt-0.5 flex-shrink-0"></i>
-            <?php echo h($s[3]); ?>
+            <?php echo h($s['education']); ?>
           </div>
+          <?php endif; ?>
         </div>
-      </div>
+      </button>
       <?php endforeach; ?>
     </div>
+
+    <p id="facultyNoResults" class="hidden text-center text-kma-muted text-sm py-10">এই বিভাগে কোনো সদস্য নেই।</p>
+
+    <!-- Data payload for the modal — reshaped once server-side, no extra AJAX round-trip -->
+    <script type="application/json" id="facultyData"><?php echo json_encode($facultyJson, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
+
+    <?php endif; ?>
   </div>
 </section>
+
+<!-- ══ FACULTY DETAIL MODAL ══ -->
+<div id="facultyModal" class="kma-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="facultyModalName">
+  <div class="kma-modal-dialog" data-close="faculty">
+    <div class="kma-modal-panel" id="facultyModalPanel">
+      <div class="kma-modal-handle" aria-hidden="true"></div>
+      <div class="kma-modal-header">
+        <div class="flex items-center gap-3 min-w-0">
+          <img id="facultyModalPhoto" src="" alt="" class="w-14 h-14 rounded-full object-cover border-2 border-accent flex-shrink-0" />
+          <div class="min-w-0">
+            <h3 id="facultyModalName" class="text-base sm:text-lg font-bold text-kma-dark dark:text-white leading-snug truncate"></h3>
+            <div id="facultyModalDesignation" class="text-accent text-xs font-semibold mt-0.5"></div>
+          </div>
+        </div>
+        <button type="button" class="kma-modal-close" data-close="faculty" aria-label="বন্ধ করুন">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="kma-modal-body">
+        <span id="facultyModalCategory" class="notice-tag tag-general mb-3 inline-block"></span>
+        <div class="grid sm:grid-cols-2 gap-3 text-sm mb-4">
+          <div id="facultyModalEducationRow" class="flex items-start gap-2">
+            <i class="bi bi-mortarboard-fill text-accent mt-0.5"></i>
+            <div><span class="text-kma-muted text-xs block">শিক্ষাগত যোগ্যতা</span><span id="facultyModalEducation" class="font-semibold text-kma-dark dark:text-gray-200"></span></div>
+          </div>
+          <div id="facultyModalExperienceRow" class="flex items-start gap-2">
+            <i class="bi bi-briefcase-fill text-accent mt-0.5"></i>
+            <div><span class="text-kma-muted text-xs block">অভিজ্ঞতা</span><span id="facultyModalExperience" class="font-semibold text-kma-dark dark:text-gray-200"></span></div>
+          </div>
+          <div id="facultyModalPhoneRow" class="flex items-start gap-2">
+            <i class="bi bi-telephone-fill text-accent mt-0.5"></i>
+            <div><span class="text-kma-muted text-xs block">ফোন</span><a id="facultyModalPhone" href="#" class="font-semibold text-accent hover:underline"></a></div>
+          </div>
+          <div id="facultyModalEmailRow" class="flex items-start gap-2">
+            <i class="bi bi-envelope-fill text-accent mt-0.5"></i>
+            <div><span class="text-kma-muted text-xs block">ইমেইল</span><a id="facultyModalEmail" href="#" class="font-semibold text-accent hover:underline break-all"></a></div>
+          </div>
+        </div>
+        <div id="facultyModalBioWrap">
+          <span class="text-kma-muted text-xs block mb-1">সংক্ষিপ্ত বিবরণ</span>
+          <div id="facultyModalBio" class="text-sm leading-7 text-kma-dark dark:text-gray-200"></div>
+        </div>
+        <div id="facultyModalPortfolioRow" class="mt-4 hidden">
+          <a id="facultyModalPortfolio" href="#" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-2 text-accent text-sm font-semibold hover:underline">
+            <i class="bi bi-globe2"></i> পোর্টফোলিও ভিজিট করুন
+          </a>
+        </div>
+      </div>
+      <div class="kma-modal-footer">
+        <span></span>
+        <button type="button" class="kma-modal-btn-close" data-close="faculty">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- CTA -->
 <section class="cta-section">
@@ -243,3 +357,5 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
 </main>
 <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<script src="<?php echo BASE_URL; ?>/assets/js/modal.js"></script>
+<script src="<?php echo BASE_URL; ?>/assets/js/faculty.js"></script>

@@ -83,12 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($errors)) {
                 if ($postAction === 'add') {
                     $pdo->prepare(
-                        'INSERT INTO notices (title,content,category,notice_date,is_pinned,is_active,file_path)
-                         VALUES (?,?,?,?,?,?,?)'
+                        'INSERT INTO notices (title,content,category,notice_date,is_pinned,is_active,file_path,created_by)
+                         VALUES (?,?,?,?,?,?,?,?)'
                     )->execute([
                         $notice['title'], $notice['content'], $notice['category'],
                         $notice['notice_date'], $notice['is_pinned'], $notice['is_active'],
-                        $notice['file_path'] ?: null,
+                        $notice['file_path'] ?: null, (int)$_SESSION['admin_id'],
                     ]);
                     $flash = 'নোটিশ সফলভাবে যোগ করা হয়েছে।';
                 } else {

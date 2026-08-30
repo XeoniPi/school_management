@@ -151,7 +151,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div class="bg-kma-bg dark:bg-gray-700 rounded-xl overflow-hidden shadow-sm">
           <!-- Accordion header -->
           <button type="button"
-                  onclick="toggleAcc('<?php echo h($accId); ?>')"
+                  data-acc-toggle="<?php echo h($accId); ?>"
                   class="w-full flex items-center gap-3 px-5 py-3.5 text-left hover:bg-kma-border/30 dark:hover:bg-gray-600 transition-colors"
                   aria-expanded="<?php echo $j===0 ? 'true' : 'false'; ?>"
                   aria-controls="<?php echo h($accId); ?>">
@@ -261,17 +261,6 @@ require_once dirname(__DIR__) . '/includes/header.php';
   </div>
 </section>
 
-<script>
-function toggleAcc(id) {
-  var body  = document.getElementById(id);
-  var btn   = body ? body.previousElementSibling : null;
-  var arrow = btn ? btn.querySelector('.acc-arrow') : null;
-  if (!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if (btn)   btn.setAttribute('aria-expanded', open ? 'false' : 'true');
-  if (arrow) arrow.style.transform = open ? '' : 'rotate(180deg)';
-}
-</script>
+<script src="<?php echo BASE_URL; ?>/assets/js/accordion.js"></script>
 
 <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>

@@ -557,6 +557,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Bootstrap 5 JS — for carousel fade transitions only -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/assets/js/modal.js"></script>
 
 <style>
 /* ══════════════════════════════════════════
@@ -905,145 +906,10 @@ require_once __DIR__ . '/includes/header.php';
 .gallery-item:focus-visible {
   outline: 2px solid #2e6b3e; outline-offset: -2px; border-radius: 4px;
 }
-
-/* ══════════════════════════════════════════
-   MODALS — custom built (no Bootstrap CSS needed)
-   Mobile-first bottom-sheet, centered card on sm+
-══════════════════════════════════════════ */
-.kma-modal {
-  position: fixed; inset: 0; z-index: 1000;
-  visibility: hidden; opacity: 0;
-  transition: opacity .25s ease, visibility 0s linear .25s;
-}
-.kma-modal:not(.show) { pointer-events: none; }
-.kma-modal.show { visibility: visible; opacity: 1; transition: opacity .25s ease; }
-
-.kma-modal-dialog {
-  position: relative; width: 100%; height: 100%;
-  display: flex; align-items: flex-end; justify-content: center; padding: 0;
-  background: rgba(15,20,15,.65);
-  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-}
-@media (min-width: 640px) {
-  .kma-modal-dialog { align-items: center; padding: 20px; }
-}
-
-.kma-modal-panel {
-  position: relative; background: #fff; width: 100%;
-  max-height: 92vh; display: flex; flex-direction: column;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -8px 40px rgba(0,0,0,.25);
-  transform: translateY(100%);
-  transition: transform .32s cubic-bezier(.32,.72,0,1);
-}
-.dark .kma-modal-panel { background: #1f2937; }
-.kma-modal.show .kma-modal-panel { transform: translateY(0); }
-
-@media (min-width: 640px) {
-  .kma-modal-panel {
-    max-width: 560px; border-radius: 20px; max-height: 85vh;
-    transform: translateY(24px) scale(.96); opacity: 0;
-    transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s ease;
-  }
-  .kma-modal.show .kma-modal-panel { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-.kma-modal-handle { width: 42px; height: 5px; border-radius: 3px; background: #d8d8c4; margin: 10px auto 0; flex-shrink: 0; }
-@media (min-width: 640px) { .kma-modal-handle { display: none; } }
-
-.kma-modal-header {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  padding: 14px 20px 16px; border-bottom: 1px solid #d8d8c4; flex-shrink: 0;
-}
-.dark .kma-modal-header { border-color: #374151; }
-
-.kma-modal-close {
-  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
-  background: #f6f6e9; color: #272727; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .2s ease, color .2s ease;
-}
-.dark .kma-modal-close { background: #374151; color: #fff; }
-.kma-modal-close:hover { background: #e53e3e; color: #fff; }
-
-.kma-modal-body { padding: 18px 20px 24px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
-
-.kma-modal-footer {
-  padding: 14px 20px; border-top: 1px solid #d8d8c4; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-}
-.dark .kma-modal-footer { border-color: #374151; }
-
-.kma-modal-btn-close {
-  background: #272727; color: #fff; border: none; cursor: pointer;
-  padding: 9px 22px; border-radius: 8px; font-weight: 600; font-size: .85rem;
-  transition: background .2s ease;
-}
-.kma-modal-btn-close:hover { background: #2e6b3e; }
-
-/* Notice attachment display */
-.notice-att-image { border-radius: 12px; overflow: hidden; border: 1px solid #d8d8c4; margin-bottom: 12px; }
-.dark .notice-att-image { border-color: #374151; }
-.notice-att-image img { width: 100%; height: auto; display: block; }
-
-.notice-att-card { display: flex; align-items: center; gap: 12px; background: #f6f6e9; border: 1px solid #d8d8c4; border-radius: 12px; padding: 12px 14px; }
-.dark .notice-att-card { background: #111827; border-color: #374151; }
-.notice-att-icon { width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; background: #2e6b3e; color: #fff; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
-.notice-att-icon.pdf { background: #c53030; }
-.notice-att-info { min-width: 0; flex: 1; }
-.notice-att-name { font-size: .85rem; font-weight: 600; color: #272727; word-break: break-word; }
-.dark .notice-att-name { color: #fff; }
-.notice-att-meta { font-size: .72rem; color: #6b6b5a; margin-top: 2px; }
-.dark .notice-att-meta { color: #9ca3af; }
-
-.notice-att-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-.notice-att-btn { display: inline-flex; align-items: center; gap: 6px; font-size: .78rem; font-weight: 700; padding: 8px 15px; border-radius: 7px; text-decoration: none; transition: all .2s ease; }
-.notice-att-btn.primary { background: #2e6b3e; color: #fff; }
-.notice-att-btn.primary:hover { background: #c9a227; color: #272727; }
-.notice-att-btn.ghost { background: transparent; border: 1.5px solid #d8d8c4; color: #272727; }
-.dark .notice-att-btn.ghost { color: #fff; border-color: #4b5563; }
-.notice-att-btn.ghost:hover { border-color: #2e6b3e; color: #2e6b3e; }
-
-/* Gallery lightbox modal (always dark — image-viewer convention) */
-.kma-modal-panel-media { background: #111; border-radius: 18px 18px 0 0; overflow: hidden; max-height: 94vh; }
-@media (min-width: 640px) { .kma-modal-panel-media { border-radius: 18px; max-width: 780px; } }
-
-.kma-modal-media { position: relative; display: flex; align-items: center; justify-content: center; background: #000; min-height: 220px; max-height: 62vh; overflow: hidden; }
-.kma-modal-media img { max-width: 100%; max-height: 62vh; object-fit: contain; }
-
-.kma-modal-caption { padding: 16px 18px 18px; background: #111; display: flex; flex-direction: column; gap: 12px; }
-@media (min-width: 480px) {
-  .kma-modal-caption { flex-direction: row; align-items: center; justify-content: space-between; }
-}
-.kma-modal-caption p { margin: 0; }
-
-.kma-modal-gallery-link {
-  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-  color: #c9a227; font-size: .82rem; font-weight: 700; text-decoration: none;
-  border: 1.5px solid rgba(201,162,39,.4); padding: 7px 14px; border-radius: 30px;
-  transition: all .2s ease;
-}
-.kma-modal-gallery-link:hover { background: #c9a227; color: #272727; }
-
-.kma-modal-close-media { position: absolute; top: 12px; right: 12px; z-index: 3; background: rgba(0,0,0,.5); color: #fff; }
-.kma-modal-close-media:hover { background: #e53e3e; }
-
-.kma-modal-nav {
-  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(0,0,0,.4); color: #fff; border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .2s ease;
-}
-.kma-modal-nav:hover { background: rgba(46,107,62,.9); }
-.kma-modal-nav-prev { left: 10px; }
-.kma-modal-nav-next { right: 10px; }
-
-@media (max-width: 420px) {
-  .kma-modal-nav { width: 34px; height: 34px; font-size: .9rem; }
-}
-
-body.kma-modal-lock { overflow: hidden; }
+/* NOTE: .kma-modal system (notice modal, gallery lightbox, notice
+   attachment styles) now lives in assets/css/site.css — shared across
+   index.php, pages/gallery.php and pages/about.php. Nothing page-specific
+   left to declare here. */
 </style>
 
 <script>
@@ -1170,23 +1036,6 @@ body.kma-modal-lock { overflow: hidden; }
         catch (e) { noticesData = {}; }
     }
 
-    var bodyEl = document.body;
-    var openCount = 0;
-    function lockScroll() { openCount++; bodyEl.classList.add('kma-modal-lock'); }
-    function unlockScroll() { openCount = openCount > 0 ? openCount - 1 : 0; if (openCount === 0) { bodyEl.classList.remove('kma-modal-lock'); } }
-
-    function showModal(modal) {
-        if (!modal) { return; }
-        modal.classList.add('show');
-        modal.setAttribute('aria-hidden', 'false');
-        lockScroll();
-    }
-    function hideModal(modal) {
-        if (!modal || !modal.classList.contains('show')) { return; }
-        modal.classList.remove('show');
-        modal.setAttribute('aria-hidden', 'true');
-        unlockScroll();
-    }
     function safe(s) { return (s === null || s === undefined) ? '' : String(s); }
 
     /* ── Notice Modal ── */
@@ -1236,10 +1085,9 @@ body.kma-modal-lock { overflow: hidden; }
             noticeAttWrap.innerHTML = '';
             noticeAttWrap.classList.add('hidden');
         }
-        /* scroll body back to top for the new notice */
         var bodyBox = noticeModal.querySelector('.kma-modal-body');
         if (bodyBox) { bodyBox.scrollTop = 0; }
-        showModal(noticeModal);
+        window.KmaModal.open(noticeModal);
     }
 
     var noticeItems = document.querySelectorAll('.notice-item');
@@ -1289,7 +1137,7 @@ body.kma-modal-lock { overflow: hidden; }
 
     function openGallery(idx) {
         renderGallery(idx);
-        showModal(galleryModal);
+        window.KmaModal.open(galleryModal);
     }
 
     for (var gi = 0; gi < galleryEls.length; gi++) {
@@ -1307,23 +1155,9 @@ body.kma-modal-lock { overflow: hidden; }
     if (galleryPrevBtn) { galleryPrevBtn.addEventListener('click', function () { renderGallery(galleryCurrent - 1); }); }
     if (galleryNextBtn) { galleryNextBtn.addEventListener('click', function () { renderGallery(galleryCurrent + 1); }); }
 
-    /* ── Shared close handling (buttons + backdrop click + Escape) ── */
-    document.addEventListener('click', function (e) {
-        var t = e.target.closest ? e.target.closest('[data-close]') : null;
-        if (!t) { return; }
-        /* dialog wrapper doubles as backdrop — only close if the click
-           landed directly on it, not on the panel/content inside it */
-        if (t.classList.contains('kma-modal-dialog') && e.target !== t) { return; }
-        var which = t.getAttribute('data-close');
-        if (which === 'notice')  { hideModal(noticeModal); }
-        if (which === 'gallery') { hideModal(galleryModal); }
-    });
-
+    /* Arrow-key navigation while the gallery modal is open.
+       Close-on-click / close-on-Escape is handled centrally by modal.js */
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' || e.key === 'Esc') {
-            hideModal(noticeModal);
-            hideModal(galleryModal);
-        }
         if (galleryModal && galleryModal.classList.contains('show')) {
             if (e.key === 'ArrowLeft')  { renderGallery(galleryCurrent - 1); }
             if (e.key === 'ArrowRight') { renderGallery(galleryCurrent + 1); }

@@ -87,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($errors)) {
                 if ($pa === 'add') {
                     $pdo->prepare(
-                        'INSERT INTO gallery (title,caption,category,image_path,sort_order,is_active) VALUES (?,?,?,?,?,?)'
-                    )->execute([$item['title'],$item['caption'],$item['category'],$item['image_path'],$item['sort_order'],$item['is_active']]);
+                        'INSERT INTO gallery (title,caption,category,image_path,sort_order,is_active,uploaded_by) VALUES (?,?,?,?,?,?,?)'
+                    )->execute([$item['title'],$item['caption'],$item['category'],$item['image_path'],$item['sort_order'],$item['is_active'],(int)$_SESSION['admin_id']]);
                     $flash = 'ছবি সফলভাবে যোগ করা হয়েছে।';
                 } else {
                     $pdo->prepare(
@@ -268,7 +268,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
         <div class="sm:col-span-2">
           <label class="form-label">ছবি আপলোড <?php echo $action==='add'?'<span class="text-red-500">*</span>':'(নতুন ছবি দিলে পুরানোটি প্রতিস্থাপিত হবে)'; ?></label>
           <label class="block border-2 border-dashed border-kma-border rounded-xl p-8 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-colors" id="dropZone">
-            <input type="file" name="gallery_image" id="galleryImageInput" class="hidden"
+            <input type="file" name="gallery_image" id="imageInput" class="hidden"
                    accept="image/jpeg,image/png,image/webp"/>
             <div id="uploadPreview">
               <i class="bi bi-cloud-arrow-up text-5xl text-kma-muted block mb-2"></i>
@@ -312,47 +312,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
   <?php endif; ?>
 </div>
 
-<script>
-(function(){
-  var input = document.getElementById('galleryImageInput');
-  var preview = document.getElementById('previewImg');
-  var placeholder = document.getElementById('uploadPreview');
-  if (!input) return;
-  input.addEventListener('change', function(){
-    if (this.files && this.files[0]) {
-      var reader = new FileReader();
-      reader.onload = function(e){
-        preview.src = e.target.result;
-        preview.classList.remove('hidden');
-        placeholder.classList.add('hidden');
-      };
-      reader.readAsDataURL(this.files[0]);
-    }
-  });
-
-  /* Drag-and-drop */
-  var zone = document.getElementById('dropZone');
-  if (zone) {
-    zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('border-accent'); });
-    zone.addEventListener('dragleave', function(){ zone.classList.remove('border-accent'); });
-    zone.addEventListener('drop', function(e){
-      e.preventDefault();
-      zone.classList.remove('border-accent');
-      var file = e.dataTransfer.files[0];
-      if (file) {
-        input.files = e.dataTransfer.files;
-        var reader = new FileReader();
-        reader.onload = function(ev){
-          preview.src = ev.target.result;
-          preview.classList.remove('hidden');
-          placeholder.classList.add('hidden');
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-})();
-</script>
+<script src="<?php echo BASE_URL; ?>/assets/js/admin-uploader.js"></script>
 <?php endif; ?>
 
 <?php require_once dirname(__DIR__) . '/includes/admin_footer.php'; ?>

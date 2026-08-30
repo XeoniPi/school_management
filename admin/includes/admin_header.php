@@ -12,6 +12,7 @@ $navItems = [
   ['notices',    BASE_URL.'/admin/views/notices.php',    'bi-bell-fill',        'নোটিশ'],
   ['admissions', BASE_URL.'/admin/views/admissions.php', 'bi-person-plus-fill', 'ভর্তি আবেদন'],
   ['classes',    BASE_URL.'/admin/views/classes.php',    'bi-grid-3x3-gap-fill','শ্রেণি ও বিষয়'],
+  ['faculty',    BASE_URL.'/admin/views/faculty.php',    'bi-person-vcard-fill','শিক্ষক ও প্রশাসন'],
   ['holidays',   BASE_URL.'/admin/views/holidays.php',   'bi-calendar3',        'ছুটির তালিকা'],
   ['downloads',  BASE_URL.'/admin/views/downloads.php',  'bi-download',         'ডাউনলোড'],
   ['gallery',    BASE_URL.'/admin/views/gallery.php',    'bi-images',           'গ্যালারি'],

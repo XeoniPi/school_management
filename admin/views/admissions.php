@@ -30,8 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $note   = sanitize(isset($_POST['admin_note'])  ? $_POST['admin_note']  : '');
             $allowed = ['pending','approved','rejected','enrolled'];
             if ($aid && in_array($status, $allowed)) {
-                $pdo->prepare('UPDATE admissions SET status=?, admin_note=?, updated_at=NOW() WHERE id=?')
-                    ->execute([$status, $note, $aid]);
+                $pdo->prepare('UPDATE admissions SET status=?, review_note=?, reviewed_by=?, reviewed_at=NOW(), updated_at=NOW() WHERE id=?')
+                    ->execute([$status, $note, (int)$_SESSION['admin_id'], $aid]);
                 $flash = 'আবেদনের স্ট্যাটাস আপডেট হয়েছে।';
             }
             header('Location: ' . BASE_URL . '/admin/views/admissions.php?flash=' . urlencode($flash));
@@ -382,9 +382,9 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
              <div><span class="badge <?php echo h($stBadge[$admission['status']] ?? 'bg-gray-100 text-gray-600'); ?> text-xs mt-0.5">
                <?php echo h($stLabel[$admission['status']] ?? $admission['status']); ?>
              </span></div></div>
-        <?php if (!empty($admission['admin_note'])): ?>
+        <?php if (!empty($admission['review_note'])): ?>
         <div><span class="text-kma-muted text-xs">অ্যাডমিন নোট</span>
-             <div class="text-xs text-kma-dark dark:text-gray-300 mt-0.5"><?php echo h($admission['admin_note']); ?></div></div>
+             <div class="text-xs text-kma-dark dark:text-gray-300 mt-0.5"><?php echo h($admission['review_note']); ?></div></div>
         <?php endif; ?>
       </div>
     </div>
@@ -409,7 +409,7 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
         <div class="mb-4">
           <label class="form-label">অ্যাডমিন নোট (ঐচ্ছিক)</label>
           <textarea name="admin_note" class="form-input" rows="3"
-                    placeholder="অতিরিক্ত মন্তব্য..."><?php echo h($admission['admin_note'] ?? ''); ?></textarea>
+                    placeholder="অতিরিক্ত মন্তব্য..."><?php echo h($admission['review_note'] ?? ''); ?></textarea>
         </div>
         <button type="submit" class="btn-primary w-full justify-center">
           <i class="bi bi-check-lg"></i> আপডেট করুন

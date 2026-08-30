@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 25, 2026 at 10:06 AM
+-- Generation Time: Aug 30, 2026 at 10:59 PM
 -- Server version: 10.1.38-MariaDB
 -- PHP Version: 7.3.2
 
@@ -46,7 +46,7 @@ CREATE TABLE `admin_users` (
 --
 
 INSERT INTO `admin_users` (`id`, `username`, `email`, `password`, `full_name`, `role`, `is_active`, `last_login`, `created_at`, `updated_at`) VALUES
-(5, 'admin', 'mdroky2016s.s.c@gmail.com', '$2y$10$q5XQIYp.imnZj8bCKMQvT.PjpYAEra.SE85Yjsl8clIk8Vhw3DAzC', 'ABDUR RAHMAN ROKY', 'super_admin', 1, '2026-08-19 15:02:31', '2026-08-19 09:02:04', '2026-08-19 09:02:31');
+(5, 'admin', 'mdroky2016s.s.c@gmail.com', '$2y$10$q5XQIYp.imnZj8bCKMQvT.PjpYAEra.SE85Yjsl8clIk8Vhw3DAzC', 'ABDUR RAHMAN ROKY', 'super_admin', 1, '2026-08-31 02:40:49', '2026-08-19 09:02:04', '2026-08-30 20:40:49');
 
 -- --------------------------------------------------------
 
@@ -83,7 +83,7 @@ CREATE TABLE `admissions` (
   `remarks` text COLLATE utf8mb4_unicode_ci,
   `photo_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `birth_cert_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `status` enum('pending','shortlisted','admitted','rejected','waitlisted') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `status` enum('pending','approved','rejected','enrolled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `reviewed_by` int(10) UNSIGNED DEFAULT NULL,
   `reviewed_at` datetime DEFAULT NULL,
   `review_note` text COLLATE utf8mb4_unicode_ci,
@@ -201,9 +201,9 @@ INSERT INTO `class_subjects` (`id`, `class_id`, `subject_id`, `teacher_name`, `s
 
 CREATE TABLE `contact_messages` (
   `id` int(10) UNSIGNED NOT NULL,
-  `sender_name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sender_phone` varchar(15) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `sender_email` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `phone` varchar(15) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `relation` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `subject` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
   `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -266,7 +266,36 @@ CREATE TABLE `exam_schedules` (
 INSERT INTO `exam_schedules` (`id`, `exam_type`, `exam_date`, `day_name`, `subject_id`, `subject_label`, `time_start`, `time_end`, `full_marks`, `mark_type`, `class_id`, `notes`, `year`, `is_active`, `sort_order`) VALUES
 (1, 'first_term', '2026-03-10', NULL, 1, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 1),
 (2, 'first_term', '2026-03-11', NULL, 2, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 2),
-(3, 'first_term', '2026-03-12', NULL, 3, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 3);
+(3, 'first_term', '2026-03-12', NULL, 3, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 3),
+(4, 'first_term', '2026-03-10', NULL, 1, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 1),
+(5, 'first_term', '2026-03-11', NULL, 2, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 2),
+(6, 'first_term', '2026-03-12', NULL, 3, NULL, '10:00:00', '12:00:00', 100, 'full', 2, NULL, 2026, 1, 3);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `faculty`
+--
+
+CREATE TABLE `faculty` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `name_bn` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name_en` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `designation` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` enum('administration','teacher','staff') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'teacher',
+  `education` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `experience` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `photo_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `portfolio_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bio` text COLLATE utf8mb4_unicode_ci,
+  `sort_order` smallint(6) NOT NULL DEFAULT '0',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `uploaded_by` int(10) UNSIGNED NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -277,6 +306,7 @@ INSERT INTO `exam_schedules` (`id`, `exam_type`, `exam_date`, `day_name`, `subje
 CREATE TABLE `gallery` (
   `id` int(10) UNSIGNED NOT NULL,
   `title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `caption` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `image_path` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `category` varchar(60) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `sort_order` smallint(6) NOT NULL DEFAULT '0',
@@ -289,8 +319,8 @@ CREATE TABLE `gallery` (
 -- Dumping data for table `gallery`
 --
 
-INSERT INTO `gallery` (`id`, `title`, `image_path`, `category`, `sort_order`, `is_active`, `uploaded_by`, `created_at`) VALUES
-(1, 'জ্ঞানের আলোয় জীবন গড়ি', 'gallery1.jpg', 'শ্রেণিকক্ষ', 1, 1, 5, '2026-08-19 01:32:39');
+INSERT INTO `gallery` (`id`, `title`, `caption`, `image_path`, `category`, `sort_order`, `is_active`, `uploaded_by`, `created_at`) VALUES
+(1, 'জ্ঞানের আলোয় জীবন গড়ি', NULL, 'gallery1.jpg', 'শ্রেণিকক্ষ', 1, 1, 5, '2026-08-19 01:32:39');
 
 -- --------------------------------------------------------
 
@@ -304,7 +334,7 @@ CREATE TABLE `holidays` (
   `description` text COLLATE utf8mb4_unicode_ci,
   `type` enum('govt','school','exam','event') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'govt',
   `start_date` date NOT NULL,
-  `end_date` date NOT NULL,
+  `end_date` date DEFAULT NULL,
   `duration` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `year` smallint(6) NOT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1'
@@ -514,6 +544,15 @@ ALTER TABLE `exam_schedules`
   ADD KEY `idx_subject_id` (`subject_id`);
 
 --
+-- Indexes for table `faculty`
+--
+ALTER TABLE `faculty`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_category` (`category`),
+  ADD KEY `idx_active` (`is_active`),
+  ADD KEY `faculty_ibfk_admin` (`uploaded_by`);
+
+--
 -- Indexes for table `gallery`
 --
 ALTER TABLE `gallery`
@@ -567,7 +606,7 @@ ALTER TABLE `syllabus_chapters`
 -- AUTO_INCREMENT for table `admin_users`
 --
 ALTER TABLE `admin_users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `admissions`
@@ -609,7 +648,13 @@ ALTER TABLE `downloads`
 -- AUTO_INCREMENT for table `exam_schedules`
 --
 ALTER TABLE `exam_schedules`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `faculty`
+--
+ALTER TABLE `faculty`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `gallery`
@@ -679,6 +724,12 @@ ALTER TABLE `downloads`
 ALTER TABLE `exam_schedules`
   ADD CONSTRAINT `exam_schedules_ibfk_class` FOREIGN KEY (`class_id`) REFERENCES `classes` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `exam_schedules_ibfk_subject` FOREIGN KEY (`subject_id`) REFERENCES `subjects` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `faculty`
+--
+ALTER TABLE `faculty`
+  ADD CONSTRAINT `faculty_ibfk_admin` FOREIGN KEY (`uploaded_by`) REFERENCES `admin_users` (`id`);
 
 --
 -- Constraints for table `gallery`

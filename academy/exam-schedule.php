@@ -5,47 +5,56 @@
 require_once dirname(__DIR__) . '/config/db.php';
 require_once dirname(__DIR__) . '/config/app.php';
 
-$pageTitle = 'পরীক্ষার সময়সূচি ২০২৫ | খলিলুল্লাহ মেমোরিয়াল একাডেমি';
+$pageTitle = 'পরীক্ষার সময়সূচি ২০২৬ | খলিলুল্লাহ মেমোরিয়াল একাডেমি';
 $pageDesc  = 'প্রথম সাময়িক, অর্ধ-বার্ষিক ও বার্ষিক পরীক্ষার সম্পূর্ণ সময়সূচি।';
 
 $pdo = getDB();
 
-/* Exam types in display order */
+/* Exam types — keys MUST match the `exam_type` ENUM in the exam_schedules table */
 $examTypes = [
-    '1st_term'  => ['label'=>'প্রথম সাময়িক পরীক্ষা', 'short'=>'১ম সাময়িক', 'icon'=>'bi-1-circle-fill',   'grad'=>'from-blue-700 to-blue-900'],
-    'half_yearly'=> ['label'=>'অর্ধ-বার্ষিক পরীক্ষা',  'short'=>'অর্ধ-বার্ষিক','icon'=>'bi-half',           'grad'=>'from-orange-600 to-orange-900'],
-    'annual'    => ['label'=>'বার্ষিক পরীক্ষা',        'short'=>'বার্ষিক',     'icon'=>'bi-trophy-fill',    'grad'=>'from-accent to-[#1a4a2a]'],
-    'monthly'   => ['label'=>'মাসিক মূল্যায়ন',        'short'=>'মাসিক',       'icon'=>'bi-calendar-month', 'grad'=>'from-gray-700 to-gray-900'],
+    'first_term' => ['label'=>'প্রথম সাময়িক পরীক্ষা', 'short'=>'১ম সাময়িক', 'icon'=>'bi-1-circle-fill',   'grad'=>'from-blue-700 to-blue-900'],
+    'mid_term'   => ['label'=>'অর্ধ-বার্ষিক পরীক্ষা',  'short'=>'অর্ধ-বার্ষিক','icon'=>'bi-half',           'grad'=>'from-orange-600 to-orange-900'],
+    'annual'     => ['label'=>'বার্ষিক পরীক্ষা',        'short'=>'বার্ষিক',     'icon'=>'bi-trophy-fill',    'grad'=>'from-accent to-[#1a4a2a]'],
+    'monthly'    => ['label'=>'মাসিক মূল্যায়ন',        'short'=>'মাসিক',       'icon'=>'bi-calendar-month', 'grad'=>'from-gray-700 to-gray-900'],
 ];
 
 /* Active type tab */
-$activeType = isset($_GET['exam']) ? sanitize($_GET['exam']) : '1st_term';
-if (!array_key_exists($activeType, $examTypes)) { $activeType = '1st_term'; }
+$activeType = isset($_GET['exam']) ? sanitize($_GET['exam']) : 'first_term';
+if (!array_key_exists($activeType, $examTypes)) { $activeType = 'first_term'; }
 
 /* Classes for selector */
-$classes = $pdo->query(
-    'SELECT * FROM classes WHERE is_active=1 ORDER BY sort_order'
-)->fetchAll(PDO::FETCH_ASSOC);
+$classes = [];
+try {
+    $classes = $pdo->query('SELECT * FROM classes WHERE is_active=1 ORDER BY sort_order')->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) { $classes = []; }
 
 /* Active class filter */
 $activeClass = isset($_GET['class']) ? (int)$_GET['class'] : 0;
 
-/* Fetch exam schedules */
-$params = [$activeType];
-$sql = 'SELECT es.*, s.name_bn AS subject_bn, s.name_en AS subject_en,
-               c.class_name, c.id AS class_id
-        FROM exam_schedules es
-        JOIN subjects s ON s.id = es.subject_id
-        JOIN classes  c ON c.id = es.class_id
-        WHERE es.exam_type = ?';
-if ($activeClass) {
-    $sql .= ' AND es.class_id = ?';
-    $params[] = $activeClass;
+/* Fetch exam schedules — defensive: table may not exist yet on some installs */
+$schedules = [];
+try {
+    $params = [$activeType];
+    $sql = 'SELECT es.*, es.time_start AS start_time, es.time_end AS end_time,
+                   es.full_marks AS total_marks,
+                   s.name_bn AS subject_bn, s.name_en AS subject_en,
+                   c.class_name, c.id AS class_id
+            FROM exam_schedules es
+            LEFT JOIN subjects s ON s.id = es.subject_id
+            JOIN classes  c ON c.id = es.class_id
+            WHERE es.exam_type = ? AND es.is_active = 1';
+    if ($activeClass) {
+        $sql .= ' AND es.class_id = ?';
+        $params[] = $activeClass;
+    }
+    $sql .= ' ORDER BY es.exam_date, es.class_id, es.sort_order';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log('exam-schedule.php DB error: ' . $e->getMessage());
+    $schedules = [];
 }
-$sql .= ' ORDER BY es.exam_date, es.class_id, es.sort_order';  
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 /* Group by date */
 $byDate = [];
@@ -54,11 +63,14 @@ foreach ($schedules as $s) {
 }
 
 /* Download PDFs */
-$dlStmt = $pdo->prepare(
-    "SELECT * FROM downloads WHERE is_active=1 AND category='exam_schedule' ORDER BY created_at DESC LIMIT 4"
-);
-$dlStmt->execute();
-$dlFiles = $dlStmt->fetchAll(PDO::FETCH_ASSOC);
+$dlFiles = [];
+try {
+    $dlStmt = $pdo->prepare(
+        "SELECT * FROM downloads WHERE is_active=1 AND category='exam_schedule' ORDER BY created_at DESC LIMIT 4"
+    );
+    $dlStmt->execute();
+    $dlFiles = $dlStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) { $dlFiles = []; }
 
 /* Marks badge helper */
 function marksBadge($marks) {

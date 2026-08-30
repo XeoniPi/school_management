@@ -37,17 +37,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($_POST['privacy']))                                         { $errors[] = 'গোপনীয়তা নীতিতে সম্মতি দিন।'; }
 
         if (empty($errors)) {
-            $pdo->prepare(
-                'INSERT INTO contact_messages (name, phone, email, relation, subject, message, contact_method, ip_address)
-                 VALUES (?,?,?,?,?,?,?,?)'
-            )->execute([
-                $old['name'], $old['phone'], $old['email'], $old['relation'],
-                $old['subject'], $old['message'], $old['contact_method'],
-                isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
-            ]);
-            $success = true;
-            $old = [];
-            unset($_SESSION['csrf_token']);
+            try {
+                $pdo->prepare(
+                    'INSERT INTO contact_messages (name, phone, email, relation, subject, message, contact_method, ip_address)
+                     VALUES (?,?,?,?,?,?,?,?)'
+                )->execute([
+                    $old['name'], $old['phone'], $old['email'], $old['relation'],
+                    $old['subject'], $old['message'], $old['contact_method'],
+                    isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
+                ]);
+                $success = true;
+                $old = [];
+                unset($_SESSION['csrf_token']);
+            } catch (Exception $e) {
+                error_log('contact.php insert error: ' . $e->getMessage());
+                $errors[] = 'দুঃখিত, বার্তা পাঠাতে সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।';
+            }
         }
     }
 }
@@ -57,10 +62,10 @@ $phone  = isset($site['school_phone'])  ? $site['school_phone']  : '+880 1866-75
 $phone2 = isset($site['school_phone2']) ? $site['school_phone2'] : '';
 $email  = isset($site['school_email'])  ? $site['school_email']  : 'info@kma.edu.bd';
 $addr   = isset($site['school_address'])? $site['school_address']: 'মধ্যম বাগ্যা, চর-জুবলী, সুবর্ণচর, নোয়াখালী';
-$hours  = isset($site['school_hours'])  ? $site['school_hours']  : 'শনি–বৃহস্পতি: সকাল ৮:০০ – দুপুর ১:৩০';
-$mapUrl = isset($site['school_map_url'])? $site['school_map_url']: '';
-$fb     = isset($site['facebook_url'])  ? $site['facebook_url']  : 'https://www.facebook.com/KhalilullahMemorialAcademy';
-$wa     = isset($site['whatsapp_number'])? $site['whatsapp_number']: '8801866751015';
+$hours  = isset($site['office_hours'])   ? $site['office_hours']   : 'শনি–বৃহস্পতি: সকাল ৮:০০ – দুপুর ১:৩০';
+$mapUrl = isset($site['school_map_url']) ? $site['school_map_url'] : '';
+$fb     = isset($site['school_facebook'])? $site['school_facebook']: 'https://www.facebook.com/KhalilullahMemorialAcademy';
+$wa     = isset($site['school_whatsapp'])? $site['school_whatsapp']: '8801866751015';
 
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>

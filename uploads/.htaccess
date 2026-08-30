@@ -1,0 +1,30 @@
+# ============================================================
+#  KMA — uploads/.htaccess
+#  Blocks execution of any script inside this folder, even if
+#  a malicious file is somehow uploaded with a .php/.phtml/etc
+#  extension. Defense-in-depth alongside the root .htaccess.
+# ============================================================
+
+# Disable script execution entirely for this folder (Apache 2.4+)
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|pht|phar|cgi|pl|py|asp|aspx|jsp|sh|exe)$">
+    Require all denied
+</FilesMatch>
+
+# Legacy Apache (mod_access) fallback
+<IfModule !mod_authz_core.c>
+    <FilesMatch "\.(php|phtml|php3|php4|php5|php7|pht|phar|cgi|pl|py|asp|aspx|jsp|sh|exe)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# Belt-and-suspenders: also strip PHP handler association if set globally
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# No directory listing
+Options -Indexes -ExecCGI

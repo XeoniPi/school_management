@@ -1,0 +1,188 @@
+/* ============================================================
+   KMA Admin — admin.css
+   Dedicated shell layout (header + sidebar + content offset).
+   Written as plain, explicit CSS rather than relying on
+   Tailwind CDN's on-the-fly responsive class generation, so the
+   core structural layout is guaranteed correct regardless of
+   CDN timing/parsing. Tailwind utility classes are still used
+   freely for everything *inside* the content area.
+   ============================================================ */
+
+:root {
+  --admin-header-h: 60px;
+  --admin-sidebar-w: 240px;
+  --admin-accent: #2e6b3e;
+  --admin-accent-dark: #1a4a2a;
+  --admin-gold: #c9a227;
+  --admin-bg: #f8faf8;
+  --admin-border: #e5e7eb;
+  --admin-text-muted: #6b7280;
+  --admin-transition: .22s cubic-bezier(.4,0,.2,1);
+}
+
+.dark {
+  --admin-bg: #0f1520;
+  --admin-border: #29313d;
+}
+
+* { box-sizing: border-box; }
+
+html, body { overflow-x: hidden; }
+
+body.admin-body {
+  font-family: 'Inter', 'Hind Siliguri', system-ui, sans-serif;
+  background: var(--admin-bg);
+  min-height: 100vh;
+}
+
+/* ── Top header bar ── */
+.admin-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--admin-header-h);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: linear-gradient(90deg, var(--admin-accent), var(--admin-accent-dark));
+  box-shadow: 0 2px 12px rgba(0,0,0,.12);
+}
+
+/* ── Sidebar ── */
+.admin-sidebar {
+  position: fixed;
+  top: var(--admin-header-h);
+  left: 0;
+  bottom: 0;
+  width: var(--admin-sidebar-w);
+  z-index: 450;
+  background: #ffffff;
+  border-right: 1px solid var(--admin-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: translateX(-100%);
+  transition: transform var(--admin-transition);
+}
+.dark .admin-sidebar { background: #131a24; }
+
+/* Desktop: sidebar always visible, pushed by JS class instead */
+@media (min-width: 1024px) {
+  .admin-sidebar { transform: translateX(0); }
+  .admin-sidebar.admin-sidebar-collapsed { transform: translateX(-100%); }
+}
+/* Mobile / tablet: sidebar is an overlay, opened via .admin-sidebar-open */
+@media (max-width: 1023.98px) {
+  .admin-sidebar.admin-sidebar-open { transform: translateX(0); }
+}
+
+.admin-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  top: var(--admin-header-h);
+  background: rgba(15, 20, 15, .45);
+  z-index: 440;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--admin-transition);
+}
+.admin-sidebar-overlay.show { opacity: 1; pointer-events: auto; }
+@media (min-width: 1024px) { .admin-sidebar-overlay { display: none; } }
+
+/* ── Main content wrapper ── */
+.admin-content-wrap {
+  padding-top: var(--admin-header-h);
+  min-height: 100vh;
+  transition: padding-left var(--admin-transition);
+}
+@media (min-width: 1024px) {
+  .admin-content-wrap { padding-left: var(--admin-sidebar-w); }
+  .admin-content-wrap.admin-content-full { padding-left: 0; }
+}
+
+.admin-main {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+  animation: adminFadeIn .35s ease both;
+}
+@media (min-width: 768px) { .admin-main { padding: 28px; } }
+
+@keyframes adminFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Sidebar nav links ── */
+.admin-nav { padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.admin-nav-section-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--admin-text-muted); padding: 14px 12px 6px;
+}
+.admin-nav-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  font-size: .87rem; font-weight: 600;
+  color: #4b5563; text-decoration: none;
+  position: relative;
+  transition: background var(--admin-transition), color var(--admin-transition), transform .15s ease;
+}
+.dark .admin-nav-link { color: #9ca3af; }
+.admin-nav-link i { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+.admin-nav-link:hover { background: rgba(46,107,62,.08); color: var(--admin-accent); transform: translateX(2px); }
+.admin-nav-link.active {
+  background: linear-gradient(90deg, var(--admin-accent), var(--admin-accent-dark));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(46,107,62,.28);
+}
+.admin-nav-link.active:hover { transform: none; }
+.admin-nav-link .badge-count {
+  margin-left: auto; font-size: .68rem; font-weight: 700;
+  background: rgba(0,0,0,.08); padding: 1px 7px; border-radius: 999px;
+}
+.admin-nav-link.active .badge-count { background: rgba(255,255,255,.25); }
+.admin-nav-divider { height: 1px; background: var(--admin-border); margin: 10px 4px; }
+
+/* ── Sidebar user card (bottom) ── */
+.admin-sidebar-footer {
+  padding: 12px; border-top: 1px solid var(--admin-border);
+}
+
+/* ── Language toggle pill ── */
+.lang-toggle {
+  display: inline-flex; align-items: center; background: rgba(255,255,255,.12);
+  border-radius: 999px; padding: 2px; gap: 2px;
+}
+.lang-toggle button {
+  border: none; background: transparent; color: rgba(255,255,255,.75);
+  font-size: .72rem; font-weight: 700; padding: 5px 11px; border-radius: 999px;
+  cursor: pointer; transition: background var(--admin-transition), color var(--admin-transition);
+}
+.lang-toggle button.active { background: #fff; color: var(--admin-accent-dark); }
+
+/* i18n: default is English; html.lang-bn switches to Bangla text nodes */
+html:not(.lang-bn) [data-i18n-bn] { display: none; }
+html.lang-bn [data-i18n-en] { display: none; }
+
+/* ── Stat / KPI cards ── */
+.admin-stat-card {
+  background: #fff; border-radius: 16px; padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  border: 1px solid var(--admin-border);
+  transition: transform var(--admin-transition), box-shadow var(--admin-transition);
+  animation: adminCardIn .45s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes adminCardIn {
+  from { opacity: 0; transform: translateY(14px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dark .admin-stat-card { background: #1a2230; }
+.admin-stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,.10); }
+
+/* ── Mobile header adjustments ── */
+@media (max-width: 639.98px) {
+  .admin-main { padding: 14px; }
+}
+
+/* ── Scrollbar polish ── */
+.admin-sidebar::-webkit-scrollbar { width: 5px; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: var(--admin-accent); border-radius: 3px; opacity: .5; }

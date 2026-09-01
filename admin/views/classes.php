@@ -81,7 +81,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (mb_strlen($subj['name_bn']) < 2) { $errors[] = 'বাংলা নাম লিখুন।'; }
             if (empty($errors)) {
                 if ($pa === 'add_subject') {
-                    $pdo->prepare('INSERT INTO subjects (name_bn,name_en,type,color_class,sort_order,is_active) VALUES (?,?,?,?,?,?)')->execute([$subj['name_bn'],$subj['name_en'],$subj['type'],$subj['color_class'],$subj['sort_order'],$subj['is_active']]);
+                    /* `code` is NOT NULL UNIQUE in the schema — auto-generate one
+                       from the English (or Bangla) name, de-duplicating if needed. */
+                    $base = !empty($subj['name_en']) ? $subj['name_en'] : $subj['name_bn'];
+                    $base = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '', $base));
+                    if ($base === '') { $base = 'subj'; }
+                    $base = substr($base, 0, 8);
+                    $code = $base;
+                    $n = 1;
+                    while (true) {
+                        $chkCode = $pdo->prepare('SELECT id FROM subjects WHERE code=?');
+                        $chkCode->execute([$code]);
+                        if (!$chkCode->fetch()) { break; }
+                        $n++;
+                        $code = substr($base, 0, 8) . $n;
+                    }
+                    $pdo->prepare('INSERT INTO subjects (code,name_bn,name_en,type,color_class,sort_order,is_active) VALUES (?,?,?,?,?,?,?)')->execute([$code,$subj['name_bn'],$subj['name_en'],$subj['type'],$subj['color_class'],$subj['sort_order'],$subj['is_active']]);
                     $flash = 'বিষয় যোগ করা হয়েছে।';
                 } else {
                     $pdo->prepare('UPDATE subjects SET name_bn=?,name_en=?,type=?,color_class=?,sort_order=?,is_active=? WHERE id=?')->execute([$subj['name_bn'],$subj['name_en'],$subj['type'],$subj['color_class'],$subj['sort_order'],$subj['is_active'],$eid]);
@@ -137,20 +152,32 @@ if ($action === 'edit_subject' && $id) {
 }
 
 /* Data for lists */
-$classes  = $pdo->query('SELECT * FROM classes  ORDER BY sort_order')->fetchAll();
-$subjects = $pdo->query('SELECT * FROM subjects ORDER BY sort_order,name_bn')->fetchAll();
+try {
+    $classes  = $pdo->query('SELECT * FROM classes  ORDER BY sort_order')->fetchAll();
+    $subjects = $pdo->query('SELECT * FROM subjects ORDER BY sort_order,name_bn')->fetchAll();
+} catch (Exception $e) {
+    error_log('classes.php list query error: ' . $e->getMessage());
+    $classes = []; $subjects = [];
+    $flash = 'ডেটাবেজ থেকে তথ্য আনতে সমস্যা হয়েছে। logs/php_errors.log ফাইলে বিস্তারিত দেখুন।';
+    $flashType = 'error';
+}
 
 /* Assignment view */
 $assignClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : (isset($classes[0]) ? (int)$classes[0]['id'] : 0);
 $assignedSubjs = [];
 if ($tab === 'assign' && $assignClassId) {
-    $aStmt = $pdo->prepare(
-        'SELECT cs.*, s.name_bn, s.type FROM class_subjects cs
-         JOIN subjects s ON s.id=cs.subject_id
-         WHERE cs.class_id=? ORDER BY cs.sort_order'
-    );
-    $aStmt->execute([$assignClassId]);
-    $assignedSubjs = $aStmt->fetchAll();
+    try {
+        $aStmt = $pdo->prepare(
+            'SELECT cs.*, s.name_bn, s.type FROM class_subjects cs
+             JOIN subjects s ON s.id=cs.subject_id
+             WHERE cs.class_id=? ORDER BY cs.sort_order'
+        );
+        $aStmt->execute([$assignClassId]);
+        $assignedSubjs = $aStmt->fetchAll();
+    } catch (Exception $e) {
+        error_log('classes.php assign query error: ' . $e->getMessage());
+        $assignedSubjs = [];
+    }
 }
 
 $csrf = generateCsrfToken();
@@ -391,9 +418,12 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <i class="bi bi-grid-3x3-gap-fill text-sm"></i>
           <?php echo h($c['class_name']); ?>
           <?php
-          $cnt = $pdo->prepare('SELECT COUNT(*) FROM class_subjects WHERE class_id=?');
-          $cnt->execute([(int)$c['id']]);
-          $cntVal = (int)$cnt->fetchColumn();
+          $cntVal = 0;
+          try {
+              $cnt = $pdo->prepare('SELECT COUNT(*) FROM class_subjects WHERE class_id=?');
+              $cnt->execute([(int)$c['id']]);
+              $cntVal = (int)$cnt->fetchColumn();
+          } catch (Exception $e) { $cntVal = 0; }
           ?>
           <span class="ml-auto text-xs font-bold px-1.5 py-0.5 rounded-full <?php echo $assignClassId===(int)$c['id'] ? 'bg-white/20 text-white' : 'bg-kma-border text-kma-muted'; ?>"><?php echo $cntVal; ?></span>
         </a>

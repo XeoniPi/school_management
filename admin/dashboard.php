@@ -41,8 +41,8 @@ require_once __DIR__ . '/includes/admin_header.php';
 <!-- Page heading -->
 <div class="flex items-center justify-between mb-6">
   <div>
-    <h1 class="text-xl font-bold text-kma-dark dark:text-white">ড্যাশবোর্ড</h1>
-    <p class="text-kma-muted text-sm mt-0.5">স্বাগতম, <?php echo h(isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : 'Admin'); ?>!</p>
+    <h1 class="text-xl font-bold text-kma-dark dark:text-white"><?php echo t('nav_dashboard'); ?></h1>
+    <p class="text-kma-muted text-sm mt-0.5"><?php echo t('welcome'); ?>, <?php echo h(isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : 'Admin'); ?>!</p>
   </div>
   <div class="text-xs text-kma-muted bg-white dark:bg-gray-800 border border-kma-border dark:border-gray-700 px-3 py-1.5 rounded-lg">
     <i class="bi bi-clock"></i> <?php echo date('d M Y, h:i A'); ?>
@@ -58,9 +58,9 @@ require_once __DIR__ . '/includes/admin_header.php';
     ['bi-chat-dots-fill',  'bg-red-500',    $stats['messages'],   'অপঠিত বার্তা',       'javascript:void(0)'],
     ['bi-images',          'bg-accent',     $stats['gallery'],    'গ্যালারি ছবি',        BASE_URL.'/admin/views/gallery.php'],
   ];
-  foreach ($statCards as $sc): ?>
+  foreach ($statCards as $i => $sc): ?>
   <a href="<?php echo h($sc[4]); ?>"
-     class="admin-card p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all group">
+     class="admin-stat-card p-5 flex items-center gap-4 hover:shadow-md hover:-translate-y-0.5 transition-all group" style="animation-delay:<?php echo $i*60; ?>ms">
     <div class="w-12 h-12 rounded-xl <?php echo h($sc[1]); ?> flex items-center justify-center text-white text-xl flex-shrink-0 group-hover:scale-110 transition-transform">
       <i class="bi <?php echo h($sc[0]); ?>"></i>
     </div>

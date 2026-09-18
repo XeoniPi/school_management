@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('downloads', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
@@ -24,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pa = sanitize(isset($_POST['post_action']) ? $_POST['post_action'] : '');
 
         if ($pa === 'delete') {
+            if (!hasPermission('downloads', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $did = (int)(isset($_POST['dl_id']) ? $_POST['dl_id'] : 0);
             if ($did) {
                 $row = $pdo->prepare('SELECT file_path FROM downloads WHERE id=?');
@@ -130,6 +132,7 @@ $downloads = $rows->fetchAll();
 $classes = $pdo->query('SELECT id,class_name FROM classes WHERE is_active=1 ORDER BY sort_order')->fetchAll();
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('downloads', 'delete');
 $cats = ['routine'=>'ক্লাস রুটিন','syllabus'=>'সিলেবাস','exam_schedule'=>'পরীক্ষার সময়সূচি','holiday'=>'ছুটির তালিকা','other'=>'অন্যান্য'];
 $catBadge = ['routine'=>'bg-blue-100 text-blue-700','syllabus'=>'bg-gold/20 text-yellow-700','exam_schedule'=>'bg-purple-100 text-purple-700','holiday'=>'bg-green-100 text-green-700','other'=>'bg-gray-100 text-gray-600'];
 
@@ -192,12 +195,14 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <div class="flex items-center gap-2">
               <a href="<?php echo UPLOAD_PDFS_URL . h($d['file_path']); ?>" target="_blank" class="text-blue-500 hover:text-blue-700 text-xs" title="দেখুন"><i class="bi bi-eye-fill"></i></a>
               <a href="?action=edit&id=<?php echo (int)$d['id']; ?>" class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('ফাইলটি মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete"/>
                 <input type="hidden" name="dl_id" value="<?php echo (int)$d['id']; ?>"/>
                 <button type="submit" class="text-red-400 hover:text-red-600 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>

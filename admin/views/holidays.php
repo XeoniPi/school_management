@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('holidays', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
@@ -27,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $postAction = sanitize(isset($_POST['post_action']) ? $_POST['post_action'] : '');
 
         if ($postAction === 'delete') {
+            if (!hasPermission('holidays', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $did = (int)(isset($_POST['holiday_id']) ? $_POST['holiday_id'] : 0);
             if ($did) { $pdo->prepare('DELETE FROM holidays WHERE id=?')->execute([$did]); $flash = 'ছুটি মুছে ফেলা হয়েছে।'; }
             header('Location: ' . BASE_URL . '/admin/views/holidays.php?flash=' . urlencode($flash)); exit;
@@ -90,6 +92,7 @@ $rows->execute($params);
 $holidays = $rows->fetchAll();
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('holidays', 'delete');
 $types = ['govt'=>'সরকারি ছুটি','school'=>'বিদ্যালয় ছুটি','exam'=>'পরীক্ষা','event'=>'বিশেষ অনুষ্ঠান'];
 $typeBadge = ['govt'=>'bg-red-100 text-red-700','school'=>'bg-green-100 text-green-700','exam'=>'bg-yellow-100 text-yellow-700','event'=>'bg-purple-100 text-purple-700'];
 require_once dirname(__DIR__) . '/includes/admin_header.php';
@@ -156,12 +159,14 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td>
             <div class="flex gap-2">
               <a href="?action=edit&id=<?php echo (int)$h2['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete"/>
                 <input type="hidden" name="holiday_id" value="<?php echo (int)$h2['id']; ?>"/>
                 <button type="submit" class="text-red-400 hover:text-red-600 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>

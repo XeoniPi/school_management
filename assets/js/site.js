@@ -339,20 +339,40 @@
     var tabs   = document.querySelectorAll('.cls-tab[' + tabAttr + ']');
     var panels = document.querySelectorAll('.class-panel, .cls-panel');
     if (!tabs.length) { return; }
+
+    var storageKey = 'kma_tab_' + panelIdPrefix + '_' + location.pathname;
+
+    function activate(tab) {
+      tabs.forEach(function (t)   { t.setAttribute('aria-selected','false'); });
+      panels.forEach(function (p) { p.classList.remove('show'); });
+      tab.setAttribute('aria-selected', 'true');
+      var val    = tab.getAttribute(tabAttr);
+      var target = document.getElementById(panelIdPrefix + val);
+      if (target) {
+        target.classList.add('show');
+        animateRows(target);
+      }
+      try { sessionStorage.setItem(storageKey, val); } catch (e) {}
+    }
+
     tabs.forEach(function (tab) {
-      tab.addEventListener('click', function () {
-        tabs.forEach(function (t)   { t.setAttribute('aria-selected','false'); });
-        panels.forEach(function (p) { p.classList.remove('show'); });
-        tab.setAttribute('aria-selected', 'true');
-        var val    = tab.getAttribute(tabAttr);
-        var target = document.getElementById(panelIdPrefix + val);
-        if (target) {
-          target.classList.add('show');
-          animateRows(target);
-        }
-      });
+      tab.addEventListener('click', function () { activate(tab); });
     });
-    if (tabs[0]) { tabs[0].setAttribute('aria-selected','true'); }
+
+    /* Restore the previously selected tab (survives back/forward
+       navigation and refresh) — falls back to the first tab. */
+    var restored = null;
+    try {
+      var savedVal = sessionStorage.getItem(storageKey);
+      if (savedVal) {
+        tabs.forEach(function (t) {
+          if (t.getAttribute(tabAttr) === savedVal) { restored = t; }
+        });
+      }
+    } catch (e) {}
+
+    if (restored) { activate(restored); }
+    else if (tabs[0]) { tabs[0].setAttribute('aria-selected','true'); }
   }
   initClsTabs('data-cls', 'cls-');
   initClsTabs('data-cls', 'r-');

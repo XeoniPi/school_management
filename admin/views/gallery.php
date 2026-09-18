@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('gallery', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
@@ -25,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Delete */
         if ($pa === 'delete') {
+            if (!hasPermission('gallery', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $did = (int)(isset($_POST['gallery_id']) ? $_POST['gallery_id'] : 0);
             if ($did) {
                 $row = $pdo->prepare('SELECT image_path FROM gallery WHERE id=?');
@@ -70,6 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'ছবির আকার সর্বোচ্চ ২ MB।';
                 } elseif (!in_array($file['type'], ALLOWED_IMG_TYPES)) {
                     $errors[] = 'শুধুমাত্র JPG, PNG বা WEBP ছবি আপলোড করুন।';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], ALLOWED_IMG_TYPES)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু একটি বৈধ ছবির সাথে মেলে না।';
                 } else {
                     $ext   = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $fname = 'gallery_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
@@ -121,6 +125,7 @@ $rows->execute($params);
 $gallery = $rows->fetchAll();
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('gallery', 'delete');
 $cats = ['general'=>'সাধারণ','event'=>'অনুষ্ঠান','sports'=>'ক্রীড়া','classroom'=>'শ্রেণিকক্ষ','ceremony'=>'অনুষ্ঠান'];
 
 require_once dirname(__DIR__) . '/includes/admin_header.php';
@@ -189,6 +194,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
            class="w-9 h-9 rounded-full bg-accent/80 hover:bg-accent flex items-center justify-center text-white transition-colors" title="সম্পাদনা">
           <i class="bi bi-pencil-fill text-sm"></i>
         </a>
+        <?php if ($canDelete): ?>
         <form method="POST" class="inline" onsubmit="return confirm('ছবিটি মুছে ফেলবেন?')">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
           <input type="hidden" name="post_action" value="delete"/>
@@ -197,6 +203,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <i class="bi bi-trash-fill text-sm"></i>
           </button>
         </form>
+        <?php endif; ?>
       </div>
       <!-- Active badge -->
       <?php if (!$g['is_active']): ?>

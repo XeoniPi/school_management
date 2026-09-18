@@ -18,6 +18,10 @@ $old     = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
         $errors[] = 'নিরাপত্তা যাচাই ব্যর্থ।';
+    } elseif (!kmaRateLimit('contact_submit', 20)) {
+        $errors[] = 'একটু ধীরে! কিছুক্ষণ পর আবার চেষ্টা করুন।';
+    } elseif (!kmaCaptchaVerify(isset($_POST['captcha_answer']) ? $_POST['captcha_answer'] : '')) {
+        $errors[] = 'যোগফলটি সঠিক দেননি, আবার চেষ্টা করুন।';
     } else {
         $old = [
             'name'           => sanitize(isset($_POST['name'])           ? $_POST['name']           : ''),
@@ -58,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $csrf = generateCsrfToken();
+$captchaQuestion = kmaCaptchaGenerate();
 $phone  = isset($site['school_phone'])  ? $site['school_phone']  : '+880 1866-751015';
 $phone2 = isset($site['school_phone2']) ? $site['school_phone2'] : '';
 $email  = isset($site['school_email'])  ? $site['school_email']  : 'info@kma.edu.bd';
@@ -223,6 +228,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <input type="checkbox" name="privacy" class="accent-accent mt-1 flex-shrink-0" required />
                     <span>আমি সম্মত যে আমার প্রদত্ত তথ্য শুধুমাত্র যোগাযোগের উদ্দেশ্যে ব্যবহৃত হবে। <span class="text-red-500">*</span></span>
                   </label>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="form-label" for="ccaptcha">যাচাইকরণ: <?php echo h($captchaQuestion); ?> = ? <span class="text-red-500">*</span></label>
+                  <input type="number" id="ccaptcha" name="captcha_answer" class="form-input" style="max-width:140px" required placeholder="উত্তর লিখুন" />
                 </div>
               </div>
 

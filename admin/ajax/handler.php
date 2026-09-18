@@ -24,6 +24,30 @@ if (!verifyCsrfToken(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
 $pdo    = getDB();
 $action = sanitize(isset($_POST['action']) ? $_POST['action'] : '');
 
+/* ── Per-action permission requirements: [module, crud-action] ── */
+$actionPermissions = [
+    'toggle_notice_pin'      => ['notices', 'edit'],
+    'toggle_notice_active'   => ['notices', 'edit'],
+    'update_admission_status'=> ['admissions', 'edit'],
+    'toggle_gallery'         => ['gallery', 'edit'],
+    'update_gallery_order'   => ['gallery', 'edit'],
+    'toggle_download'        => ['downloads', 'edit'],
+    'get_stats'              => [null, null], /* dashboard summary, safe for any logged-in staff */
+    'mark_message_read'      => [null, null],
+    'get_message'            => [null, null],
+    'delete_gallery'         => ['gallery', 'delete'],
+    'delete_download'        => ['downloads', 'delete'],
+    'update_teacher'         => ['classes', 'edit'],
+    'search_admissions'      => ['admissions', 'read'],
+];
+
+if (isset($actionPermissions[$action])) {
+    list($permModule, $permAction) = $actionPermissions[$action];
+    if ($permModule !== null && !hasPermission($permModule, $permAction)) {
+        jsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+    }
+}
+
 /* ─────────────────────────────────────────────────────────────────────── */
 switch ($action) {
 

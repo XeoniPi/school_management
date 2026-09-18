@@ -14,27 +14,51 @@ if (isAdminLoggedIn()) {
 $error = '';
 $old_username = '';
 
+$LOGIN_MAX_ATTEMPTS = 5;
+$LOGIN_LOCKOUT_MINUTES = 15;
+$clientIp = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '0.0.0.0';
+
+function kmaRecentFailedAttempts($pdo, $ip, $minutes)
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND attempted_at >= (NOW() - INTERVAL ? MINUTE)'
+        );
+        $stmt->execute([$ip, $minutes]);
+        return (int)$stmt->fetchColumn();
+    } catch (Exception $e) { return 0; /* table may not be migrated yet — fail open, not closed */ }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
         $error = 'নিরাপত্তা যাচাই ব্যর্থ। পুনরায় চেষ্টা করুন।';
     } else {
+        $pdo = getDB();
+        $recentFails = kmaRecentFailedAttempts($pdo, $clientIp, $LOGIN_LOCKOUT_MINUTES);
+
+        if ($recentFails >= $LOGIN_MAX_ATTEMPTS) {
+            $error = 'অতিরিক্ত ব্যর্থ চেষ্টার কারণে সাময়িকভাবে লগইন বন্ধ রাখা হয়েছে। ' . $LOGIN_LOCKOUT_MINUTES . ' মিনিট পর আবার চেষ্টা করুন।';
+        } else {
         $username = sanitize(isset($_POST['username']) ? $_POST['username'] : '');
         $password = isset($_POST['password']) ? $_POST['password'] : '';
 
         if (empty($username) || empty($password)) {
             $error = 'ইউজারনেম ও পাসওয়ার্ড উভয়ই দিন।';
         } else {
-            $pdo  = getDB();
             $stmt = $pdo->prepare('SELECT * FROM admin_users WHERE username = ? AND is_active = 1 LIMIT 1');
             $stmt->execute([$username]);
             $admin = $stmt->fetch();
 
             if ($admin && password_verify($password, $admin['password'])) {
+                /* Successful login — clear this IP's failure history */
+                try { $pdo->prepare('DELETE FROM login_attempts WHERE ip_address = ?')->execute([$clientIp]); } catch (Exception $e) {}
+
                 session_regenerate_id(true);
                 $_SESSION['admin_id']       = $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
                 $_SESSION['admin_name']     = $admin['full_name'];
                 $_SESSION['admin_role']     = $admin['role'];
+                $_SESSION['last_activity']  = time();
 
                 $pdo->prepare('UPDATE admin_users SET last_login = NOW() WHERE id = ?')
                     ->execute([$admin['id']]);
@@ -43,14 +67,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             else {
+                /* Record the failed attempt for rate-limiting */
+                try { $pdo->prepare('INSERT INTO login_attempts (ip_address, username) VALUES (?,?)')->execute([$clientIp, $username]); } catch (Exception $e) {}
+                $remaining = $LOGIN_MAX_ATTEMPTS - $recentFails - 1;
                 $error = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
+                if ($remaining <= 2 && $remaining >= 0) {
+                    $error .= ' (আর ' . $remaining . ' বার ভুল হলে সাময়িকভাবে লক হয়ে যাবে।)';
+                }
             }
+        }
         }
     }
 }
 
 
 $csrf = generateCsrfToken();
+if (empty($error) && !empty($_GET['flash'])) { $error = sanitize($_GET['flash']); }
 ?>
 <!DOCTYPE html>
 <html lang="bn" class="light">

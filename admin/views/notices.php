@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('notices', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── Delete ── */
         if ($postAction === 'delete') {
+            if (!hasPermission('notices', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $did = (int)(isset($_POST['notice_id']) ? $_POST['notice_id'] : 0);
             if ($did) {
                 $pdo->prepare('UPDATE notices SET is_active=0 WHERE id=?')->execute([$did]);
@@ -72,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'ফাইল সর্বোচ্চ ৫ MB হতে পারবে।';
                 } elseif (!in_array($file['type'], $allowed)) {
                     $errors[] = 'শুধুমাত্র PDF, JPG, PNG ফাইল আপলোড করুন।';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], $allowed)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু বৈধ নয়।';
                 } else {
                     $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $fname = 'notice_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
@@ -143,6 +147,7 @@ $listStmt->execute($params);
 $notices = $listStmt->fetchAll();
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('notices', 'delete');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
@@ -230,12 +235,14 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <div class="flex items-center gap-2">
               <a href="<?php echo BASE_URL; ?>/admin/views/notices.php?action=edit&id=<?php echo (int)$nt['id']; ?>"
                  class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('এই নোটিশটি মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete"/>
                 <input type="hidden" name="notice_id" value="<?php echo (int)$nt['id']; ?>"/>
                 <button type="submit" class="text-red-500 hover:text-red-700 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>

@@ -429,7 +429,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="gallery-grid">
           <?php foreach ($gallery as $gi => $img):
             $isLarge  = ($gi === 0);
-            $imgSrc   = h(BASE_URL . '/' . ltrim($img['image_path'], '/'));
+            $imgSrc   = h(UPLOAD_IMAGES_URL . ltrim($img['image_path'], '/'));
             $imgTitle = !empty($img['title']) ? h($img['title']) : 'গ্যালারি ছবি';
           ?>
           <div class="gallery-item<?php echo $isLarge ? ' large' : ''; ?>"

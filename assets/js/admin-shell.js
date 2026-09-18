@@ -92,4 +92,53 @@
     /* Apply saved preference (default stays English if nothing saved) */
     var savedLang = localStorage.getItem('kma_admin_lang');
     if (savedLang === 'bn') { applyLang('bn'); } else { applyLang('en'); }
+
+    /* ── Nav dropdown groups ── */
+    var navGroupToggles = document.querySelectorAll('[data-nav-group]');
+    for (var g = 0; g < navGroupToggles.length; g++) {
+        (function (btn) {
+            var targetId = btn.getAttribute('data-nav-group');
+            var panel = document.getElementById(targetId);
+            btn.addEventListener('click', function () {
+                var isOpen = panel.style.display !== 'none';
+                panel.style.display = isOpen ? 'none' : 'flex';
+                btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+            });
+        })(navGroupToggles[g]);
+    }
+
+    /* ── Toast notifications ── */
+    /* Convert any server-rendered .alert banners into auto-dismissing
+       toasts, so success/error messages never sit stale on the page. */
+    (function () {
+        var alerts = document.querySelectorAll('.admin-main > .alert, .admin-main .alert:not(.perm-static)');
+        if (!alerts.length) { return; }
+
+        var container = document.createElement('div');
+        container.id = 'adminToastContainer';
+        document.body.appendChild(container);
+
+        alerts.forEach(function (el) {
+            el.classList.add('admin-toast');
+            var closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'toast-close';
+            closeBtn.innerHTML = '<i class="bi bi-x"></i>';
+            var progress = document.createElement('div');
+            progress.className = 'toast-progress';
+
+            function dismiss() {
+                el.classList.add('toast-leaving');
+                setTimeout(function () { if (el.parentNode) { el.parentNode.removeChild(el); } }, 300);
+            }
+            closeBtn.addEventListener('click', dismiss);
+            el.appendChild(closeBtn);
+            el.appendChild(progress);
+            container.appendChild(el);
+
+            var timer = setTimeout(dismiss, 4500);
+            el.addEventListener('mouseenter', function () { clearTimeout(timer); progress.style.animationPlayState = 'paused'; });
+            el.addEventListener('mouseleave', function () { timer = setTimeout(dismiss, 1500); progress.style.animationPlayState = 'running'; });
+        });
+    }());
 }());

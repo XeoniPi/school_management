@@ -85,8 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$admin || !password_verify($currentPwd, $admin['password'])) {
                 $errors[] = 'বর্তমান পাসওয়ার্ড সঠিক নয়।'; $flashType = 'error';
-            } elseif (mb_strlen($newPwd) < 8) {
-                $errors[] = 'নতুন পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।'; $flashType = 'error';
+            } elseif (!kmaIsStrongPassword($newPwd)) {
+                $errors[] = kmaPasswordRuleText(); $flashType = 'error';
             } elseif ($newPwd !== $confirmPwd) {
                 $errors[] = 'নিশ্চিত পাসওয়ার্ড মেলেনি।'; $flashType = 'error';
             } else {
@@ -106,6 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'লোগোর আকার সর্বোচ্চ ২ MB।'; $flashType = 'error';
                 } elseif (!in_array($file['type'], ALLOWED_IMG_TYPES)) {
                     $errors[] = 'শুধুমাত্র JPG, PNG বা WEBP আপলোড করুন।'; $flashType = 'error';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], ALLOWED_IMG_TYPES)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু একটি বৈধ ছবির সাথে মেলে না।'; $flashType = 'error';
                 } else {
                     $ext   = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $fname = 'logo.' . $ext;

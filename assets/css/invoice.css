@@ -1,0 +1,116 @@
+/* ============================================================
+   KMA — invoice.css
+   A4 printable invoice: one page, two equal copies (office +
+   customer) separated by a dashed cut line.
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', 'Hind Siliguri', sans-serif;
+  background: #e5e7eb;
+  margin: 0;
+  color: #1f2937;
+}
+
+.inv-toolbar {
+  position: sticky; top: 0; z-index: 10;
+  background: #1a4a2a; padding: 12px 20px;
+  display: flex; gap: 10px; align-items: center;
+}
+.inv-toolbar button, .inv-toolbar a {
+  background: #2e6b3e; color: #fff; border: none; padding: 8px 18px;
+  border-radius: 8px; font-weight: 700; font-size: .85rem; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.inv-toolbar button:hover, .inv-toolbar a:hover { background: #c9a227; color: #1a4a2a; }
+
+.inv-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 20px auto;
+  background: #fff;
+  padding: 10mm;
+  box-shadow: 0 4px 24px rgba(0,0,0,.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.inv-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 6mm 4mm;
+}
+
+.inv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #2e6b3e;
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+.inv-brand { display: flex; gap: 12px; align-items: flex-start; }
+.inv-logo {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg,#2e6b3e,#1a4a2a);
+  color: #fff; font-weight: 800; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.inv-school-bn { font-family: 'Hind Siliguri', sans-serif; font-weight: 700; font-size: 1.05rem; color: #1a4a2a; }
+.inv-school-en { font-size: .72rem; color: #6b7280; letter-spacing: .03em; text-transform: uppercase; margin-top: 1px; }
+.inv-contact { display: flex; flex-wrap: wrap; gap: 8px; font-size: .66rem; color: #4b5563; margin-top: 5px; }
+.inv-contact span { display: inline-flex; align-items: center; gap: 3px; }
+
+.inv-meta { text-align: right; flex-shrink: 0; }
+.inv-copy-tag {
+  display: inline-block; background: #c9a227; color: #1a4a2a;
+  font-size: .65rem; font-weight: 800; letter-spacing: .06em;
+  padding: 3px 10px; border-radius: 4px; margin-bottom: 6px;
+}
+.inv-no { font-size: .8rem; font-weight: 700; color: #1f2937; }
+.inv-date { font-size: .72rem; color: #6b7280; margin-top: 2px; }
+
+.inv-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: 14px; }
+.inv-table th {
+  text-align: left; width: 34%; padding: 7px 8px;
+  background: #f6f6e9; color: #4b5563; font-weight: 700;
+  border: 1px solid #e5e7eb;
+}
+.inv-table td { padding: 7px 8px; border: 1px solid #e5e7eb; }
+.inv-amount-row th, .inv-amount-row td {
+  background: #e8f4eb; font-weight: 800; font-size: .95rem; color: #1a4a2a;
+}
+
+.inv-sign-row { display: flex; justify-content: space-between; margin: 18px 0 10px; gap: 40px; }
+.inv-sign { flex: 1; font-size: .7rem; color: #6b7280; text-align: center; }
+.inv-sign-line { border-top: 1px solid #9ca3af; margin-bottom: 5px; height: 26px; }
+
+.inv-note {
+  margin-top: auto;
+  background: #fff8e6; border: 1px dashed #c9a227; border-radius: 8px;
+  padding: 8px 10px; font-size: .68rem; line-height: 1.6; color: #7a5c00;
+  font-family: 'Hind Siliguri', sans-serif;
+}
+.inv-note i { color: #c9a227; margin-right: 3px; }
+
+.inv-cut-line {
+  display: flex; align-items: center; justify-content: center;
+  border-top: 1.5px dashed #9ca3af;
+  position: relative; margin: 0;
+  height: 0;
+}
+.inv-cut-line span {
+  position: absolute; top: -9px; background: #fff;
+  padding: 0 10px; font-size: .65rem; color: #9ca3af;
+  display: flex; align-items: center; gap: 4px;
+}
+
+@media print {
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .inv-page { box-shadow: none; margin: 0; width: auto; min-height: auto; }
+  @page { size: A4; margin: 8mm; }
+}

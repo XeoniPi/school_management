@@ -8,6 +8,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('faculty', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
@@ -42,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Delete */
         if ($pa === 'delete') {
+            if (!hasPermission('faculty', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $did = (int)(isset($_POST['faculty_id']) ? $_POST['faculty_id'] : 0);
             if ($did) {
                 $row = $pdo->prepare('SELECT photo_path FROM faculty WHERE id=?');
@@ -97,6 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'ছবির আকার সর্বোচ্চ ২ MB।';
                 } elseif (!in_array($file['type'], ALLOWED_IMG_TYPES)) {
                     $errors[] = 'শুধুমাত্র JPG, PNG বা WEBP ছবি আপলোড করুন।';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], ALLOWED_IMG_TYPES)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু একটি বৈধ ছবির সাথে মেলে না।';
                 } else {
                     $ext   = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $fname = 'faculty_' . time() . '_' . bin2hex(random_bytes(3)) . '.' . $ext;
@@ -158,6 +162,7 @@ $rows->execute($params);
 $facultyList = $rows->fetchAll();
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('faculty', 'delete');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
@@ -221,6 +226,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
            class="w-9 h-9 rounded-full bg-accent/80 hover:bg-accent flex items-center justify-center text-white transition-colors" title="সম্পাদনা">
           <i class="bi bi-pencil-fill text-sm"></i>
         </a>
+        <?php if ($canDelete): ?>
         <form method="POST" class="inline" onsubmit="return confirm('এই সদস্যকে মুছে ফেলবেন?')">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
           <input type="hidden" name="post_action" value="delete"/>
@@ -229,6 +235,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <i class="bi bi-trash-fill text-sm"></i>
           </button>
         </form>
+        <?php endif; ?>
       </div>
       <?php if (!$m['is_active']): ?>
       <div class="absolute top-2 left-2 bg-gray-800/80 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded">নিষ্ক্রিয়</div>

@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('classes', 'read');
 
 $pdo    = getDB();
 $tab    = isset($_GET['tab'])    ? sanitize($_GET['tab'])    : 'classes';
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── CLASS CRUD ── */
         if ($pa === 'delete_class') {
+            if (!hasPermission('classes', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $pdo->prepare('UPDATE classes SET is_active=0 WHERE id=?')->execute([$eid]);
             $flash = 'শ্রেণি নিষ্ক্রিয় করা হয়েছে।';
             header('Location: ' . BASE_URL . '/admin/views/classes.php?flash=' . urlencode($flash)); exit;
@@ -64,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── SUBJECT CRUD ── */
         if ($pa === 'delete_subject') {
+            if (!hasPermission('classes', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $pdo->prepare('DELETE FROM subjects WHERE id=?')->execute([$eid]);
             $flash = 'বিষয় মুছে ফেলা হয়েছে।';
             header('Location: ' . BASE_URL . '/admin/views/classes.php?tab=subjects&flash=' . urlencode($flash)); exit;
@@ -158,7 +161,11 @@ try {
 } catch (Exception $e) {
     error_log('classes.php list query error: ' . $e->getMessage());
     $classes = []; $subjects = [];
-    $flash = 'ডেটাবেজ থেকে তথ্য আনতে সমস্যা হয়েছে। logs/php_errors.log ফাইলে বিস্তারিত দেখুন।';
+    if (kmaIsSuperRole($_SESSION['admin_role'] ?? '')) {
+        $flash = 'Database error: ' . $e->getMessage();
+    } else {
+        $flash = 'ডেটাবেজ থেকে তথ্য আনতে সমস্যা হয়েছে। Error Logs পেজে বিস্তারিত দেখুন।';
+    }
     $flashType = 'error';
 }
 
@@ -181,6 +188,7 @@ if ($tab === 'assign' && $assignClassId) {
 }
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('classes', 'delete');
 $subjectTypes  = ['core'=>'মূল বিষয়','religion'=>'ধর্ম','extra'=>'সহশিক্ষা','optional'=>'ঐচ্ছিক'];
 $colorClasses  = ['s-bn'=>'বাংলা (নীল)','s-en'=>'ইংরেজি (সবুজ)','s-math'=>'গণিত (হলুদ)','s-sci'=>'বিজ্ঞান (বেগুনি)','s-soc'=>'সমাজ (কমলা)','s-rel'=>'ধর্ম (গোলাপি)','s-ict'=>'ICT (নীল)','s-art'=>'শিল্পকলা','s-pe'=>'শারীরিক শিক্ষা'];
 $typeBadge = ['core'=>'bg-blue-100 text-blue-700','religion'=>'bg-yellow-100 text-yellow-700','extra'=>'bg-green-100 text-green-700','optional'=>'bg-gray-100 text-gray-600'];
@@ -287,12 +295,14 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td>
             <div class="flex gap-2">
               <a href="?tab=classes&action=edit_class&id=<?php echo (int)$c['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('শ্রেণিটি নিষ্ক্রিয় করবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete_class"/>
                 <input type="hidden" name="record_id" value="<?php echo (int)$c['id']; ?>"/>
                 <button type="submit" class="text-red-400 hover:text-red-600 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>
@@ -384,12 +394,14 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td>
             <div class="flex gap-2">
               <a href="?tab=subjects&action=edit_subject&id=<?php echo (int)$s['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('বিষয়টি মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete_subject"/>
                 <input type="hidden" name="record_id" value="<?php echo (int)$s['id']; ?>"/>
                 <button type="submit" class="text-red-400 hover:text-red-600 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>

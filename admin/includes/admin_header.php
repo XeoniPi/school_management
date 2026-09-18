@@ -9,26 +9,35 @@ $adminName = isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : 'Admin';
 $adminRole = isset($_SESSION['admin_role']) ? $_SESSION['admin_role'] : '';
 $currentAdminPage = isset($currentAdminPage) ? $currentAdminPage : '';
 
-/* Nav items: [key, url, icon, i18n key, roles-allowed (null = everyone)] */
+/* Nav items: [key, url, icon, i18n key, module_key for permission check (null = always visible)] */
 $navItems = [
   ['dashboard',  BASE_URL.'/admin/dashboard.php',        'bi-speedometer2',      'nav_dashboard',  null],
-  ['notices',    BASE_URL.'/admin/views/notices.php',    'bi-bell-fill',         'nav_notices',    ['super_admin','admin','editor','moderator']],
-  ['admissions', BASE_URL.'/admin/views/admissions.php', 'bi-person-plus-fill',  'nav_admissions', ['super_admin','admin','editor','moderator']],
-  ['classes',    BASE_URL.'/admin/views/classes.php',    'bi-grid-3x3-gap-fill','nav_classes',     ['super_admin','admin','editor','moderator']],
-  ['faculty',    BASE_URL.'/admin/views/faculty.php',    'bi-person-vcard-fill','nav_faculty',     ['super_admin','admin','editor','moderator']],
-  ['holidays',   BASE_URL.'/admin/views/holidays.php',   'bi-calendar3',         'nav_holidays',   ['super_admin','admin','editor','moderator']],
-  ['downloads',  BASE_URL.'/admin/views/downloads.php',  'bi-download',          'nav_downloads',  ['super_admin','admin','editor','moderator']],
-  ['gallery',    BASE_URL.'/admin/views/gallery.php',    'bi-images',            'nav_gallery',    ['super_admin','admin','editor','moderator']],
-  ['messages',   BASE_URL.'/admin/views/messages.php',   'bi-chat-dots-fill',    'nav_messages',   ['super_admin','admin','editor']],
-  ['accounts',   BASE_URL.'/admin/views/accounts.php',   'bi-cash-coin',         'nav_accounts',   ['super_admin','admin','accounts']],
-  ['users',      BASE_URL.'/admin/views/users.php',      'bi-people-fill',       'nav_users',      ['super_admin']],
-  ['settings',   BASE_URL.'/admin/views/settings.php',   'bi-gear-fill',         'nav_settings',   ['super_admin','admin','editor','moderator']],
+  ['notices',    BASE_URL.'/admin/views/notices.php',    'bi-bell-fill',         'nav_notices',    'notices'],
+  ['admissions', BASE_URL.'/admin/views/admissions.php', 'bi-person-plus-fill',  'nav_admissions', 'admissions'],
+  ['classes',    BASE_URL.'/admin/views/classes.php',    'bi-grid-3x3-gap-fill','nav_classes',     'classes'],
+  ['faculty',    BASE_URL.'/admin/views/faculty.php',    'bi-person-vcard-fill','nav_faculty',     'faculty'],
+  ['holidays',   BASE_URL.'/admin/views/holidays.php',   'bi-calendar3',         'nav_holidays',   'holidays'],
+  ['downloads',  BASE_URL.'/admin/views/downloads.php',  'bi-download',          'nav_downloads',  'downloads'],
+  ['gallery',    BASE_URL.'/admin/views/gallery.php',    'bi-images',            'nav_gallery',    'gallery'],
+  ['messages',   BASE_URL.'/admin/views/messages.php',   'bi-chat-dots-fill',    'nav_messages',   null],
+  ['accounts',   BASE_URL.'/admin/views/accounts.php',   'bi-cash-coin',         'nav_accounts',   'accounts'],
+  ['users',      BASE_URL.'/admin/views/users.php',      'bi-people-fill',       'nav_users',      'users'],
+  ['error-log',  BASE_URL.'/admin/views/error-log.php',  'bi-bug-fill',          'nav_error_log',  'users'],
+  ['backup',     BASE_URL.'/admin/views/backup.php',     'bi-database-fill-down','nav_backup',     'users'],
+  ['settings',   BASE_URL.'/admin/views/settings.php',   'bi-gear-fill',         'nav_settings',   'settings'],
 ];
 
-function kmaNavAllowed($roles, $currentRole)
+/* 'messages' has no dedicated module — visible to super_admin/admin/editor only (not accounts/moderator) */
+function kmaNavAllowed($moduleKey, $navKey, $role)
 {
-    if ($roles === null) { return true; }
-    return in_array($currentRole, $roles, true);
+    if ($moduleKey === null) {
+        if ($navKey === 'messages') { return kmaIsSuperRole($role) || $role === 'editor'; }
+        return true;
+    }
+    if ($moduleKey === 'users' || $moduleKey === 'settings') {
+        return kmaIsSuperRole($role);
+    }
+    return hasPermission($moduleKey, 'read');
 }
 ?>
 <!DOCTYPE html>
@@ -130,9 +139,14 @@ tbody td{padding:.7rem 1rem;font-size:.83rem;color:#374151;vertical-align:middle
             <div class="text-xs font-bold text-kma-dark dark:text-white"><?php echo h($adminName); ?></div>
             <div class="text-xs text-kma-muted capitalize"><?php echo h($adminRole); ?></div>
           </div>
+          <a href="<?php echo BASE_URL; ?>/admin/views/profile.php" class="flex items-center gap-2 px-4 py-2.5 text-sm text-kma-muted hover:bg-kma-bg dark:hover:bg-gray-700 hover:text-accent transition-colors">
+            <i class="bi bi-person-circle"></i> <?php echo t('my_profile'); ?>
+          </a>
+          <?php if (kmaIsSuperRole($adminRole)): ?>
           <a href="<?php echo BASE_URL; ?>/admin/views/settings.php" class="flex items-center gap-2 px-4 py-2.5 text-sm text-kma-muted hover:bg-kma-bg dark:hover:bg-gray-700 hover:text-accent transition-colors">
             <i class="bi bi-gear-fill"></i> <?php echo t('nav_settings'); ?>
           </a>
+          <?php endif; ?>
           <a href="<?php echo BASE_URL; ?>/admin/logout.php" class="flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-t border-kma-border dark:border-gray-700">
             <i class="bi bi-box-arrow-right"></i> <?php echo t('nav_logout'); ?>
           </a>
@@ -147,8 +161,35 @@ tbody td{padding:.7rem 1rem;font-size:.83rem;color:#374151;vertical-align:middle
 <aside id="adminSidebar" class="admin-sidebar">
   <nav class="admin-nav">
     <?php foreach ($navItems as $item):
-      if (!kmaNavAllowed($item[4], $adminRole)) { continue; }
+      if (!kmaNavAllowed($item[4], $item[0], $adminRole)) { continue; }
+      if ($item[0] === 'admissions'):
+        $admActive = $currentAdminPage === 'admissions';
+        $subStatus = isset($_GET['status']) ? $_GET['status'] : '';
+        $isRequestView = $admActive && $subStatus === 'pending';
+        $isFormView = $currentAdminPage === 'admission-form';
+        $groupOpen = $admActive || $isFormView;
     ?>
+    <div class="admin-nav-group">
+      <button type="button" class="admin-nav-link admin-nav-group-toggle <?php echo ($admActive && !$isRequestView) || $isFormView ? 'active' : ''; ?>" data-nav-group="admissions-group" aria-expanded="<?php echo $groupOpen?'true':'false'; ?>">
+        <i class="bi <?php echo h($item[2]); ?>"></i>
+        <span class="flex-1 text-left"><?php echo t($item[3]); ?></span>
+        <i class="bi bi-chevron-down admin-nav-caret"></i>
+      </button>
+      <div class="admin-nav-subgroup" id="admissions-group" style="<?php echo $groupOpen ? '' : 'display:none'; ?>">
+        <a href="<?php echo BASE_URL; ?>/admin/views/admissions.php" class="admin-nav-sublink <?php echo ($admActive && !$isRequestView) ? 'active' : ''; ?>">
+          <i class="bi bi-list-ul"></i> <span data-i18n-en>Admission List</span><span data-i18n-bn>ভর্তি তালিকা</span>
+        </a>
+        <a href="<?php echo BASE_URL; ?>/admin/views/admissions.php?status=pending" class="admin-nav-sublink <?php echo $isRequestView ? 'active' : ''; ?>">
+          <i class="bi bi-hourglass-split"></i> <span data-i18n-en>Admission Requests</span><span data-i18n-bn>ভর্তির অনুরোধ</span>
+        </a>
+        <?php if (hasPermission('admissions', 'insert')): ?>
+        <a href="<?php echo BASE_URL; ?>/admin/views/admission-form.php" class="admin-nav-sublink <?php echo $isFormView ? 'active' : ''; ?>">
+          <i class="bi bi-plus-circle"></i> <span data-i18n-en>New Admission Form</span><span data-i18n-bn>নতুন ভর্তি ফর্ম</span>
+        </a>
+        <?php endif; ?>
+      </div>
+    </div>
+      <?php continue; endif; ?>
     <a href="<?php echo h($item[1]); ?>" class="admin-nav-link <?php echo $currentAdminPage===$item[0]?'active':''; ?>">
       <i class="bi <?php echo h($item[2]); ?>"></i>
       <?php echo t($item[3]); ?>

@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (mb_strlen($username) < 3)          { $errors[] = 'ইউজারনেম কমপক্ষে ৩ অক্ষরের হতে হবে।'; }
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { $errors[] = 'সঠিক ইমেইল দিন।'; }
         if (mb_strlen($fullName) < 2)           { $errors[] = 'পূর্ণ নাম লিখুন।'; }
-        if (mb_strlen($password) < 8)           { $errors[] = 'পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে।'; }
+        if (!kmaIsStrongPassword($password))    { $errors[] = kmaPasswordRuleText(); }
 
         if (empty($errors)) {
             $chk = $pdo->prepare('SELECT id FROM admin_users WHERE username=? OR email=?');
@@ -86,6 +86,7 @@ require_once __DIR__ . '/includes/admin_header.php';
       <div>
         <label class="form-label">পাসওয়ার্ড <span class="text-red-500">*</span></label>
         <input type="password" name="password" class="form-input" required minlength="8" autocomplete="new-password"/>
+        <p class="text-xs text-kma-muted mt-1">কমপক্ষে ৮ অক্ষর, ১টি বড় হাতের অক্ষর, ১টি ছোট হাতের অক্ষর ও ১টি সংখ্যা থাকতে হবে।</p>
       </div>
       <div>
         <label class="form-label">ভূমিকা (Role)</label>

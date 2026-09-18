@@ -6,6 +6,7 @@
 require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 requireAdminLogin();
+requirePermission('admissions', 'read');
 
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
@@ -40,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Delete */
         if ($postAction === 'delete') {
+            if (!hasPermission('admissions', 'delete')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to delete.') . '&flashType=error'); exit; }
             $aid = (int)(isset($_POST['admission_id']) ? $_POST['admission_id'] : 0);
             if ($aid) {
                 $pdo->prepare('DELETE FROM admissions WHERE id=?')->execute([$aid]);
@@ -106,6 +108,8 @@ foreach ($sumRows as $sr) {
 $sumMap['total'] = array_sum($sumMap);
 
 $csrf = generateCsrfToken();
+$canDelete = hasPermission('admissions', 'delete');
+$canEdit = hasPermission('admissions', 'edit');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 
 /* Helpers */
@@ -214,12 +218,30 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
             <div class="flex items-center gap-2">
               <a href="<?php echo BASE_URL; ?>/admin/views/admissions.php?action=view&id=<?php echo (int)$adm['id']; ?>"
                  class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-eye-fill"></i> দেখুন</a>
+              <?php if ($adm['status'] === 'pending' && $canEdit): ?>
+              <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি গ্রহণ করবেন?')">
+                <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
+                <input type="hidden" name="post_action" value="update_status"/>
+                <input type="hidden" name="admission_id" value="<?php echo (int)$adm['id']; ?>"/>
+                <input type="hidden" name="status" value="approved"/>
+                <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-semibold" title="Accept"><i class="bi bi-check-circle-fill"></i></button>
+              </form>
+              <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি প্রত্যাখ্যান করবেন?')">
+                <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
+                <input type="hidden" name="post_action" value="update_status"/>
+                <input type="hidden" name="admission_id" value="<?php echo (int)$adm['id']; ?>"/>
+                <input type="hidden" name="status" value="rejected"/>
+                <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Deny"><i class="bi bi-x-circle-fill"></i></button>
+              </form>
+              <?php endif; ?>
+              <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি স্থায়ীভাবে মুছবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="delete"/>
                 <input type="hidden" name="admission_id" value="<?php echo (int)$adm['id']; ?>"/>
                 <button type="submit" class="text-red-400 hover:text-red-600 text-xs"><i class="bi bi-trash-fill"></i></button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>
@@ -423,6 +445,7 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
               class="btn-outline flex-1 justify-center text-xs py-2.5">
         <i class="bi bi-printer-fill"></i> প্রিন্ট
       </button>
+      <?php if ($canDelete): ?>
       <form method="POST" class="flex-1" onsubmit="return confirm('এই আবেদনটি স্থায়ীভাবে মুছে ফেলবেন?')">
         <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
         <input type="hidden" name="post_action" value="delete"/>
@@ -431,6 +454,7 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
           <i class="bi bi-trash-fill"></i> মুছুন
         </button>
       </form>
+      <?php endif; ?>
     </div>
 
   </div>

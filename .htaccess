@@ -1,31 +1,56 @@
 # ============================================================
 #  Khalilullah Memorial Academy — Root .htaccess
 #  Apache 2.4 | PHP 7.2 | XAMPP
+#  Security-hardened
 # ============================================================
 
-Options -Indexes -MultiViews
+Options -Indexes -MultiViews -ExecCGI
 ServerSignature Off
 
 # ── Rewrite engine ──────────────────────────────────────────
 RewriteEngine On
 RewriteBase /kma/
 
+# ── HTTPS enforcement (ENABLE once you have an SSL certificate) ──
+# Uncomment these two lines when the site is served over HTTPS
+# (a live domain, not local XAMPP) to force all traffic to HTTPS:
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
 # Force www off (optional — remove if not needed on localhost)
 # RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
 # RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
 
-# ── Block direct access to sensitive files ──────────────────
-RewriteRule ^config/         - [F,L]
-RewriteRule ^database/       - [F,L]
-RewriteRule ^\.git           - [F,L]
-RewriteRule ^composer\.      - [F,L]
-RewriteRule \.sql$           - [F,L]
-RewriteRule \.log$           - [F,L]
-RewriteRule \.env$           - [F,L]
+# ── Block direct access to sensitive files/paths ─────────────
+RewriteRule ^config/               - [F,L]
+RewriteRule ^database/             - [F,L]
+RewriteRule ^logs/                 - [F,L]
+RewriteRule ^includes/             - [F,L]
+RewriteRule ^admin/includes/       - [F,L]
+RewriteRule ^\.git                 - [F,L]
+RewriteRule ^composer\.            - [F,L]
+RewriteRule \.sql$                 - [F,L]
+RewriteRule \.log$                 - [F,L]
+RewriteRule \.env$                 - [F,L]
+RewriteRule (^|/)\.                - [F,L]
 
-# ── Prevent PHP execution inside uploads ────────────────────
-RewriteRule ^uploads/.*\.php$ - [F,L]
-RewriteRule ^uploads/.*\.phtml$ - [F,L]
+# ── Prevent script execution inside uploads ──────────────────
+RewriteRule ^uploads/.*\.(php|phtml|php\d|pht|phar|cgi|pl|py|asp|aspx|jsp|sh|exe)$ - [F,L]
+
+# ── Block common attack patterns in the query string ──────────
+<IfModule mod_rewrite.c>
+    RewriteCond %{QUERY_STRING} (\<|%3C)\s*script [NC,OR]
+    RewriteCond %{QUERY_STRING} union.*select [NC,OR]
+    RewriteCond %{QUERY_STRING} (sleep|benchmark)\s*\( [NC,OR]
+    RewriteCond %{QUERY_STRING} \.\.[\/\\] [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# ── Block bad bots & scanners ────────────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|nessus|masscan|zgrab|acunetix|nmap|w3af) [NC]
+    RewriteRule .* - [F,L]
+</IfModule>
 
 # ── Security headers ─────────────────────────────────────────
 <IfModule mod_headers.c>
@@ -33,8 +58,16 @@ RewriteRule ^uploads/.*\.phtml$ - [F,L]
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+    # HSTS — only takes effect once served over HTTPS; harmless otherwise
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    # Content-Security-Policy — allows the specific third-party CDNs this
+    # project actually uses (Tailwind Play CDN, Google Fonts, Bootstrap
+    # Icons/JS via jsDelivr, Unsplash/placehold.co demo images, Facebook
+    # CDN images used for staff photos). Tighten the img-src list once
+    # all demo/placeholder images are replaced with local uploads.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
     Header always unset X-Powered-By
-    # Remove Server header if possible
     Header always unset Server
 </IfModule>
 
@@ -59,24 +92,23 @@ RewriteRule ^uploads/.*\.phtml$ - [F,L]
     ExpiresByType text/html            "access plus 0 seconds"
 </IfModule>
 
-# ── PHP settings (XAMPP dev environment) ────────────────────
+# ── PHP settings (hardened) ─────────────────────────────────
 <IfModule mod_php7.c>
-    php_flag  display_errors    Off
-    php_flag  log_errors        On
-    php_value error_log         logs/php_errors.log
-    php_value upload_max_filesize 10M
-    php_value post_max_size       12M
-    php_value max_execution_time  60
+    php_flag  display_errors        Off
+    php_flag  display_startup_errors Off
+    php_flag  log_errors            On
+    php_flag  expose_php            Off
+    php_value error_log             logs/php_errors.log
+    php_value upload_max_filesize   10M
+    php_value post_max_size         12M
+    php_value max_execution_time    60
     php_value session.cookie_httponly On
     php_value session.use_strict_mode On
-</IfModule>
-
-# ── Block bad bots & scanners ────────────────────────────────
-<IfModule mod_rewrite.c>
-    RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|nessus|masscan|zgrab) [NC]
-    RewriteRule .* - [F,L]
+    php_value session.cookie_samesite Strict
+    php_value session.gc_maxlifetime 7200
 </IfModule>
 
 # ── Custom error pages ───────────────────────────────────────
 ErrorDocument 403 /kma/index.php
 ErrorDocument 404 /kma/index.php
+ErrorDocument 500 /kma/index.php

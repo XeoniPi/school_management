@@ -63,7 +63,7 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (!empty($gallery)): ?>
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
       <?php foreach ($gallery as $gi => $g):
-          $imgSrc = UPLOAD_GALLERY_URL . h($g['filename']);
+          $imgSrc = UPLOAD_IMAGES_URL . h($g['image_path']);
           $imgAlt = !empty($g['caption']) ? h($g['caption']) : 'গ্যালারি ছবি';
           $imgCap = !empty($g['description']) ? h($g['description']) : $imgAlt;
       ?>

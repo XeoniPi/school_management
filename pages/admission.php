@@ -19,6 +19,10 @@ $old     = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verifyCsrfToken(isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '')) {
         $errors[] = 'নিরাপত্তা যাচাই ব্যর্থ। পুনরায় চেষ্টা করুন।';
+    } elseif (!kmaRateLimit('admission_submit', 30)) {
+        $errors[] = 'একটু ধীরে! কিছুক্ষণ পর আবার চেষ্টা করুন।';
+    } elseif (!kmaCaptchaVerify(isset($_POST['captcha_answer']) ? $_POST['captcha_answer'] : '')) {
+        $errors[] = 'যোগফলটি সঠিক দেননি, আবার চেষ্টা করুন।';
     } else {
         /* Sanitize all fields */
         $old = [
@@ -80,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'ছবির আকার ২ MB-এর বেশি হওয়া যাবে না।';
                 } elseif (!in_array($file['type'], ALLOWED_IMG_TYPES)) {
                     $errors[] = 'শুধুমাত্র JPG, PNG বা WEBP ছবি আপলোড করুন।';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], ALLOWED_IMG_TYPES)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু একটি বৈধ ছবির সাথে মেলে না।';
                 } else {
                     $ext       = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $photoPath = 'photo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
@@ -91,54 +97,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $certPath = null;
             if (!empty($_FILES['birth_cert_file']['name'])) {
                 $file = $_FILES['birth_cert_file'];
+                $allowedCertTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+                $allowedCertExts  = ['pdf', 'jpg', 'jpeg', 'png'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
                 if ($file['size'] > MAX_PDF_SIZE) {
                     $errors[] = 'ফাইলের আকার ৫ MB-এর বেশি হওয়া যাবে না।';
+                } elseif (!in_array($file['type'], $allowedCertTypes, true) || !in_array($ext, $allowedCertExts, true)) {
+                    $errors[] = 'শুধুমাত্র PDF, JPG বা PNG ফাইল আপলোড করুন।';
+                } elseif (!kmaVerifyFileContent($file['tmp_name'], $allowedCertTypes)) {
+                    $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু বৈধ নয়।';
                 } else {
-                    $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
                     $certPath = 'cert_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                     move_uploaded_file($file['tmp_name'], UPLOAD_PDFS . $certPath);
                 }
             }
 
             if (empty($errors)) {
-                $appNo = generateAppNo();
-                $stmt  = $pdo->prepare(
-                    'INSERT INTO admissions
-                     (app_no, student_name_bn, student_name_en, dob, gender, religion,
-                      blood_group, apply_class_id, prev_school, birth_cert_no,
-                      father_name, mother_name, father_occupation, mother_occupation,
-                      guardian_phone, guardian_email, father_nid, annual_income,
-                      address, district, upazila, post_code,
-                      scholarship_apply, hear_about, remarks,
-                      photo_path, birth_cert_path, ip_address)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
-                );
-                $stmt->execute([
-                    $appNo,
-                    $old['student_name_bn'], $old['student_name_en'],
-                    $old['dob'], $old['gender'], $old['religion'],
-                    $old['blood_group'], $old['apply_class_id'],
-                    $old['prev_school'], $old['birth_cert_no'],
-                    $old['father_name'], $old['mother_name'],
-                    $old['father_occupation'], $old['mother_occupation'],
-                    $old['guardian_phone'], $old['guardian_email'],
-                    $old['father_nid'], $old['annual_income'],
-                    $old['address'], $old['district'],
-                    $old['upazila'], $old['post_code'],
-                    $old['scholarship_apply'], $old['hear_about'],
-                    $old['remarks'], $photoPath, $certPath,
-                    isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
-                ]);
+                try {
+                    $appNo = generateAppNo();
+                    $stmt  = $pdo->prepare(
+                        'INSERT INTO admissions
+                         (app_no, student_name_bn, student_name_en, dob, gender, religion,
+                          blood_group, apply_class_id, prev_school, birth_cert_no,
+                          father_name, mother_name, father_occupation, mother_occupation,
+                          guardian_phone, guardian_email, father_nid, annual_income,
+                          address, district, upazila, post_code,
+                          scholarship_apply, hear_about, remarks,
+                          photo_path, birth_cert_path, ip_address, source, status)
+                         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                    );
+                    $stmt->execute([
+                        $appNo,
+                        $old['student_name_bn'], $old['student_name_en'],
+                        $old['dob'], $old['gender'], $old['religion'],
+                        $old['blood_group'], $old['apply_class_id'],
+                        $old['prev_school'], $old['birth_cert_no'],
+                        $old['father_name'], $old['mother_name'],
+                        $old['father_occupation'], $old['mother_occupation'],
+                        $old['guardian_phone'], $old['guardian_email'],
+                        $old['father_nid'], $old['annual_income'],
+                        $old['address'], $old['district'],
+                        $old['upazila'], $old['post_code'],
+                        $old['scholarship_apply'], $old['hear_about'],
+                        $old['remarks'], $photoPath, $certPath,
+                        isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '',
+                        'website', 'pending',
+                    ]);
 
-                $success = true;
-                $old     = [];
-                unset($_SESSION['csrf_token']);
+                    $success = true;
+                    $old     = [];
+                    unset($_SESSION['csrf_token']);
+                } catch (Exception $e) {
+                    error_log('admission.php insert error: ' . $e->getMessage());
+                    $errors[] = 'দুঃখিত, আবেদন জমা দিতে একটি সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন, অথবা সরাসরি বিদ্যালয়ে যোগাযোগ করুন।';
+                }
             }
         }
     }
 }
 
 $csrf = generateCsrfToken();
+$captchaQuestion = kmaCaptchaGenerate();
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 <script>var BASE_URL = '<?php echo BASE_URL; ?>';</script>
@@ -722,6 +741,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <span class="req">*</span>
               </span>
             </label>
+          </div>
+
+          <div class="mb-6">
+            <label class="form-label" for="acaptcha">যাচাইকরণ: <?php echo h($captchaQuestion); ?> = ? <span class="req">*</span></label>
+            <input type="number" id="acaptcha" name="captcha_answer" class="form-input" style="max-width:140px" required placeholder="উত্তর লিখুন" />
           </div>
 
           <button type="submit" id="admissionSubmitBtn"

@@ -10,6 +10,10 @@ $pageDesc  = 'ক্লাস রুটিন, সিলেবাস, ছুট�
 
 $pdo = getDB();
 
+/* Holiday calendar always follows the current year (no hardcoded year) */
+$holidayYear = (int)date('Y');
+$bnYear = strtr((string)$holidayYear, ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯']);
+
 /* Classes with subject counts */
 $classes = $pdo->query(
     'SELECT c.id, c.class_key, c.class_name, c.class_name_en, c.age_range, c.description,
@@ -278,6 +282,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="bg-kma-dark text-white px-5 py-3.5 flex items-center gap-2 font-bold text-sm">
               <i class="bi bi-journal-bookmark-fill text-gold"></i> বিষয় তালিকা
             </div>
+            <?php if (empty($subjList)): ?>
+            <div class="px-5 py-10 text-center text-kma-muted text-sm">
+              <i class="bi bi-inbox text-3xl block mb-2 opacity-30"></i>
+              এই শ্রেণির জন্য এখনো কোনো বিষয় যোগ করা হয়নি। অ্যাডমিন প্যানেল থেকে যোগ করুন।
+            </div>
+            <?php else: ?>
             <ul>
               <?php foreach ($subjList as $si => $sub):
                 $typeCls = [
@@ -313,6 +323,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
               </li>
               <?php endforeach; ?>
             </ul>
+            <?php endif; ?>
           </div>
         </div>
       </div>
@@ -444,7 +455,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
   <div class="max-w-7xl mx-auto px-4">
     <div class="text-center title-center mb-8 reveal">
       <div class="ornament"><span></span><i class="bi bi-calendar3"></i><span></span></div>
-      <h2 class="section-title">ছুটির তালিকা ২০২৬</h2>
+      <h2 class="section-title">ছুটির তালিকা <?php echo $bnYear; ?></h2>
       <p class="text-kma-muted text-sm mt-1">বাংলাদেশ সরকারি ছুটি ও বিদ্যালয়ের বার্ষিক ক্যালেন্ডার</p>
     </div>
 
@@ -479,9 +490,9 @@ require_once dirname(__DIR__) . '/includes/header.php';
     <!-- Accordion by month -->
     <?php
     $pdo2 = getDB();
-    $holidays = $pdo2->query(
-        'SELECT * FROM holidays WHERE year = 2026 AND is_active = 1 ORDER BY start_date'
-    )->fetchAll();
+    $hStmt = $pdo2->prepare('SELECT * FROM holidays WHERE year = ? AND is_active = 1 ORDER BY start_date');
+    $hStmt->execute([$holidayYear]);
+    $holidays = $hStmt->fetchAll();
 
     /* Group by month */
     $byMonth = [];
@@ -502,7 +513,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     ?>
     <div class="holiday-month reveal mb-2 rounded-xl overflow-hidden shadow-sm border border-kma-border">
       <button type="button" class="holiday-month-toggle w-full flex items-center justify-between px-5 py-4 bg-kma-bg dark:bg-gray-700 font-bold text-sm text-kma-dark dark:text-white hover:bg-accent hover:text-white transition-colors group">
-        <span class="flex items-center gap-2"><i class="bi bi-calendar-month text-accent group-hover:text-white"></i> <?php echo h($mn); ?> ২০২৬</span>
+        <span class="flex items-center gap-2"><i class="bi bi-calendar-month text-accent group-hover:text-white"></i> <?php echo h($mn); ?> <?php echo $bnYear; ?></span>
         <span class="flex items-center gap-2">
           <span class="holiday-month-count text-xs bg-white/70 group-hover:bg-white/20 text-kma-dark group-hover:text-white px-2 py-0.5 rounded-full font-bold"><?php echo count($mHols); ?></span>
           <i class="bi bi-chevron-down acc-icon transition-transform text-kma-muted group-hover:text-white"></i>

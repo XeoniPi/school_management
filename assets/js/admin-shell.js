@@ -141,4 +141,18 @@
             el.addEventListener('mouseleave', function () { timer = setTimeout(dismiss, 1500); progress.style.animationPlayState = 'running'; });
         });
     }());
+    /* ── Permission matrix (users.php): insert/edit imply read; clearing read clears both ── */
+    var permBoxes = document.querySelectorAll('.perm-switch input[type="checkbox"]');
+    for (var pb = 0; pb < permBoxes.length; pb++) {
+        permBoxes[pb].addEventListener('change', function () {
+            var m = this.name.match(/^perm\[(.+)\]\[(read|insert|edit)\]$/);
+            if (!m) { return; }
+            var base = 'perm[' + m[1] + ']';
+            var rd = document.querySelector('input[name="' + base + '[read]"]');
+            var ins = document.querySelector('input[name="' + base + '[insert]"]');
+            var ed = document.querySelector('input[name="' + base + '[edit]"]');
+            if (m[2] !== 'read' && this.checked && rd) { rd.checked = true; }
+            if (m[2] === 'read' && !this.checked) { if (ins) { ins.checked = false; } if (ed) { ed.checked = false; } }
+        });
+    }
 }());

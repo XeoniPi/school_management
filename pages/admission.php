@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু একটি বৈধ ছবির সাথে মেলে না।';
                 } else {
                     $ext       = pathinfo($file['name'], PATHINFO_EXTENSION);
-                    $photoPath = 'photo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                    $photoPath = 'photo_' . time() . '_' . bin2hex(random_bytes(16)) . '.' . $ext;
                     move_uploaded_file($file['tmp_name'], UPLOAD_IMAGES . $photoPath);
                 }
             }
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif (!kmaVerifyFileContent($file['tmp_name'], $allowedCertTypes)) {
                     $errors[] = 'ফাইলের প্রকৃত বিষয়বস্তু বৈধ নয়।';
                 } else {
-                    $certPath = 'cert_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                    $certPath = 'cert_' . time() . '_' . bin2hex(random_bytes(16)) . '.' . $ext;
                     move_uploaded_file($file['tmp_name'], UPLOAD_PDFS . $certPath);
                 }
             }

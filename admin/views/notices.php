@@ -11,6 +11,8 @@ requirePermission('notices', 'read');
 $pdo    = getDB();
 $action = isset($_GET['action']) ? $_GET['action'] : 'list';
 $id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+if ($action === 'add')  { requirePermission('notices', 'insert'); }
+if ($action === 'edit') { requirePermission('notices', 'edit'); }
 $currentAdminPage = 'notices';
 $pageTitle = 'নোটিশ ব্যবস্থাপনা | KMA Admin';
 
@@ -41,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── Toggle pin ── */
         if ($postAction === 'toggle_pin') {
+            requirePermission('notices', 'edit');
             $tid = (int)(isset($_POST['notice_id']) ? $_POST['notice_id'] : 0);
             if ($tid) {
                 $pdo->prepare('UPDATE notices SET is_pinned = NOT is_pinned WHERE id=?')->execute([$tid]);
@@ -51,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── Save (add/edit) ── */
         if (in_array($postAction, ['add', 'edit'])) {
+            requirePermission('notices', $postAction === 'add' ? 'insert' : 'edit');
             $notice = [
                 'title'       => sanitize(isset($_POST['title'])       ? $_POST['title']       : ''),
                 'content'     => sanitize(isset($_POST['content'])     ? $_POST['content']     : ''),
@@ -148,6 +152,8 @@ $notices = $listStmt->fetchAll();
 
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('notices', 'delete');
+$canInsert = hasPermission('notices', 'insert');
+$canEdit = hasPermission('notices', 'edit');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
@@ -217,7 +223,8 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td><span class="badge <?php echo h(noticeCategoryClass($nt['category'])); ?>"><?php echo h(noticeCategoryLabel($nt['category'])); ?></span></td>
           <td class="text-xs text-kma-muted"><?php echo date('d/m/Y', strtotime($nt['notice_date'])); ?></td>
           <td>
-            <form method="POST" class="inline">
+            <?php if ($canEdit): ?>
+<form method="POST" class="inline">
               <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
               <input type="hidden" name="post_action" value="toggle_pin"/>
               <input type="hidden" name="notice_id" value="<?php echo (int)$nt['id']; ?>"/>
@@ -225,6 +232,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
                 <i class="bi bi-pin-fill"></i>
               </button>
             </form>
+<?php endif; ?>
           </td>
           <td>
             <span class="badge <?php echo $nt['is_active'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'; ?>">

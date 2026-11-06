@@ -144,8 +144,22 @@ if ($action === 'edit' && $id) {
 if ($action === 'add' && !hasPermission('accounts', 'insert')) { $action = 'list'; }
 
 /* Lookup lists for the party pickers */
-$studentsList = $pdo->query("SELECT id, student_name_bn, app_no FROM admissions ORDER BY created_at DESC LIMIT 300")->fetchAll();
+/* Students: ONLY status='enrolled' (confirmed admissions) are eligible —
+   pending/approved/rejected applicants haven't joined yet. */
+$classesList = $pdo->query("SELECT id, class_name FROM classes WHERE is_active=1 ORDER BY sort_order")->fetchAll();
+$studentsList = $pdo->query(
+    "SELECT id, student_name_bn, app_no, apply_class_id
+     FROM admissions WHERE status='enrolled'
+     ORDER BY student_name_bn"
+)->fetchAll();
 $facultyListAll = $pdo->query("SELECT id, name_bn, designation FROM faculty WHERE is_active=1 ORDER BY name_bn")->fetchAll();
+
+$preselectClassId = 0;
+if (!empty($tx['student_id'])) {
+    foreach ($studentsList as $st) {
+        if ((int)$st['id'] === (int)$tx['student_id']) { $preselectClassId = (int)$st['apply_class_id']; break; }
+    }
+}
 
 /* ── Summary cards (all-time + this month) ── */
 $sumTotalIncome  = (float)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE type='income'")->fetchColumn();
@@ -431,13 +445,24 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
         <input type="text" name="party_name" class="form-input" placeholder="Name (optional)" value="<?php echo h($tx['party_name']??''); ?>"/>
       </div>
       <div id="partyStudentWrap" class="party-field hidden">
-        <select name="student_id" class="form-input">
-          <option value="">— Select student —</option>
-          <?php foreach ($studentsList as $st): ?>
-          <option value="<?php echo (int)$st['id']; ?>" <?php echo ((int)($tx['student_id']??0))===(int)$st['id']?'selected':''; ?>><?php echo h($st['student_name_bn'].' ('.$st['app_no'].')'); ?></option>
-          <?php endforeach; ?>
-        </select>
+        <div class="grid sm:grid-cols-2 gap-2">
+          <select id="studentClassFilter" class="form-input">
+            <option value="">১. শ্রেণি নির্বাচন করুন</option>
+            <?php foreach ($classesList as $c): ?>
+            <option value="<?php echo (int)$c['id']; ?>" <?php echo $preselectClassId===(int)$c['id']?'selected':''; ?>><?php echo h($c['class_name']); ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="relative">
+            <input type="text" id="studentSearchInput" class="form-input" autocomplete="off"
+                   placeholder="২. নাম বা আবেদন নং দিয়ে খুঁজুন"
+                   <?php echo $preselectClassId ? '' : 'disabled'; ?> />
+            <div id="studentSearchResults" class="student-search-results hidden"></div>
+          </div>
+        </div>
+        <input type="hidden" name="student_id" id="studentIdInput" value="<?php echo h($tx['student_id']??''); ?>"/>
+        <p class="text-xs text-kma-muted mt-1">শুধুমাত্র <strong>ভর্তি নিশ্চিত (enrolled)</strong> শিক্ষার্থীরা এখানে দেখাবে — বাতিল/অপেক্ষমাণ/অনুমোদিত আবেদন আসবে না।</p>
       </div>
+      <script type="application/json" id="studentsData"><?php echo json_encode($studentsList, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
       <div id="partyFacultyWrap" class="party-field hidden">
         <select name="faculty_id" class="form-input">
           <option value="">— Select faculty/staff —</option>

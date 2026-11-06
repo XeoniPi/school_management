@@ -6,6 +6,7 @@ require_once dirname(dirname(__DIR__)) . '/config/db.php';
 require_once dirname(dirname(__DIR__)) . '/config/app.php';
 
 requireAdminLogin();
+if (!(kmaIsSuperRole($_SESSION['admin_role'] ?? '') || ($_SESSION['admin_role'] ?? '') === 'editor')) { header('Location: ' . BASE_URL . '/admin/dashboard.php?flash=' . urlencode('You do not have permission to do that.') . '&flashType=error'); exit; }
 
 $pdo = getDB();
 

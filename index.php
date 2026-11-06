@@ -107,7 +107,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="hero-overlay"></div>
         <div class="hero-stripe"></div>
         <div class="hero-emblem">
-          <img src="https://placehold.co/220x220/2e6b3e/ffffff?text=KMA&font=open-sans" alt="একাডেমি প্রতীক" />
+          <img src="<?php echo h(kmaLogoUrl([220, 220, '2e6b3e', 'ffffff'])); ?>" alt="একাডেমি প্রতীক" />
         </div>
         <div class="relative z-[4] max-w-7xl mx-auto px-4 w-full">
           <div class="hero-content max-w-xl">
@@ -132,7 +132,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="hero-overlay"></div>
         <div class="hero-stripe"></div>
         <div class="hero-emblem">
-          <img src="https://placehold.co/220x220/c9a227/272727?text=KMA&font=open-sans" alt="একাডেমি প্রতীক" />
+          <img src="<?php echo h(kmaLogoUrl([220, 220, 'c9a227', '272727'])); ?>" alt="একাডেমি প্রতীক" />
         </div>
         <div class="relative z-[4] max-w-7xl mx-auto px-4 w-full">
           <div class="hero-content max-w-xl">
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="hero-overlay"></div>
         <div class="hero-stripe"></div>
         <div class="hero-emblem">
-          <img src="https://placehold.co/220x220/1a4a2a/f6f6e9?text=KMA&font=open-sans" alt="একাডেমি প্রতীক" />
+          <img src="<?php echo h(kmaLogoUrl([220, 220, '1a4a2a', 'f6f6e9'])); ?>" alt="একাডেমি প্রতীক" />
         </div>
         <div class="relative z-[4] max-w-7xl mx-auto px-4 w-full">
           <div class="hero-content max-w-xl">

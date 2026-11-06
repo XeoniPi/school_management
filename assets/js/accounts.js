@@ -86,4 +86,83 @@
         })(partyBtns[p]);
     }
     if (partyInput) { applyParty(partyInput.value || 'other'); }
+
+    /* ── Student combobox: class filter → searchable student picker ── */
+    var studentsData = [];
+    var dataEl = document.getElementById('studentsData');
+    if (dataEl) {
+        try { studentsData = JSON.parse(dataEl.textContent || dataEl.innerText || '[]'); }
+        catch (e) { studentsData = []; }
+    }
+    var classFilter    = document.getElementById('studentClassFilter');
+    var searchInput    = document.getElementById('studentSearchInput');
+    var resultsPanel   = document.getElementById('studentSearchResults');
+    var studentIdInput = document.getElementById('studentIdInput');
+
+    if (classFilter && searchInput && resultsPanel && studentIdInput) {
+        var studentsInClass = function (classId) {
+            var list = [];
+            if (!classId) { return list; }
+            for (var i = 0; i < studentsData.length; i++) {
+                if (String(studentsData[i].apply_class_id) === String(classId)) { list.push(studentsData[i]); }
+            }
+            return list;
+        };
+        var renderResults = function (matches) {
+            if (!matches.length) {
+                resultsPanel.innerHTML = '<div class="student-search-empty">কোনো শিক্ষার্থী পাওয়া যায়নি</div>';
+                resultsPanel.classList.remove('hidden');
+                return;
+            }
+            var html = '';
+            var shown = matches.slice(0, 25);
+            for (var i = 0; i < shown.length; i++) {
+                var s = shown[i];
+                var label = String(s.student_name_bn).replace(/"/g, '&quot;') + ' (' + s.app_no + ')';
+                html += '<button type="button" class="student-search-item" data-id="' + s.id + '" data-name="' + label + '">' +
+                        s.student_name_bn + ' <span>(' + s.app_no + ')</span></button>';
+            }
+            if (matches.length > shown.length) {
+                html += '<div class="student-search-empty">আরও ' + (matches.length - shown.length) + ' জন — খুঁজে সংকুচিত করুন</div>';
+            }
+            resultsPanel.innerHTML = html;
+            resultsPanel.classList.remove('hidden');
+            var items = resultsPanel.querySelectorAll('.student-search-item');
+            for (var j = 0; j < items.length; j++) {
+                items[j].addEventListener('click', function () {
+                    studentIdInput.value = this.getAttribute('data-id');
+                    searchInput.value = this.getAttribute('data-name');
+                    resultsPanel.classList.add('hidden');
+                });
+            }
+        };
+        var doSearch = function () {
+            var pool = studentsInClass(classFilter.value);
+            var query = searchInput.value.trim().toLowerCase();
+            if (!query) { renderResults(pool); return; }
+            renderResults(pool.filter(function (s) {
+                return s.student_name_bn.toLowerCase().indexOf(query) !== -1 ||
+                       String(s.app_no).toLowerCase().indexOf(query) !== -1;
+            }));
+        };
+        classFilter.addEventListener('change', function () {
+            studentIdInput.value = '';
+            searchInput.value = '';
+            searchInput.disabled = !classFilter.value;
+            resultsPanel.classList.add('hidden');
+        });
+        searchInput.addEventListener('focus', doSearch);
+        searchInput.addEventListener('input', function () { studentIdInput.value = ''; doSearch(); });
+        document.addEventListener('click', function (e) {
+            if (e.target !== searchInput && !resultsPanel.contains(e.target)) { resultsPanel.classList.add('hidden'); }
+        });
+        if (studentIdInput.value) {
+            for (var k = 0; k < studentsData.length; k++) {
+                if (String(studentsData[k].id) === String(studentIdInput.value)) {
+                    searchInput.value = studentsData[k].student_name_bn + ' (' + studentsData[k].app_no + ')';
+                    break;
+                }
+            }
+        }
+    }
 }());

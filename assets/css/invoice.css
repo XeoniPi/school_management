@@ -114,3 +114,5 @@ body {
   .inv-page { box-shadow: none; margin: 0; width: auto; min-height: auto; }
   @page { size: A4; margin: 8mm; }
 }
+
+.inv-logo-img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }

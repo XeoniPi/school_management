@@ -49,6 +49,27 @@ if (isset($actionPermissions[$action])) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────── */
+/* ── Per-action permission map (module + required right) ── */
+$ajaxPerms = [
+    'toggle_notice_pin'       => ['notices',    'edit'],
+    'toggle_notice_active'    => ['notices',    'edit'],
+    'update_admission_status' => ['admissions', 'edit'],
+    'search_admissions'       => ['admissions', 'read'],
+    'toggle_gallery'          => ['gallery',    'edit'],
+    'update_gallery_order'    => ['gallery',    'edit'],
+    'delete_gallery'          => ['gallery',    'delete'],
+    'toggle_download'         => ['downloads',  'edit'],
+    'delete_download'         => ['downloads',  'delete'],
+    'update_teacher'          => ['classes',    'edit'],
+];
+if (isset($ajaxPerms[$action]) && !hasPermission($ajaxPerms[$action][0], $ajaxPerms[$action][1])) {
+    jsonResponse(['success' => false, 'message' => 'Permission denied'], 403);
+}
+$ajaxRole = isset($_SESSION['admin_role']) ? $_SESSION['admin_role'] : '';
+if (in_array($action, ['mark_message_read', 'get_message'], true) && !(kmaIsSuperRole($ajaxRole) || $ajaxRole === 'editor')) {
+    jsonResponse(['success' => false, 'message' => 'Permission denied'], 403);
+}
+
 switch ($action) {
 
     /* ── Toggle notice pin ── */

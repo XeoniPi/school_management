@@ -69,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             else {
                 /* Record the failed attempt for rate-limiting */
                 try { $pdo->prepare('INSERT INTO login_attempts (ip_address, username) VALUES (?,?)')->execute([$clientIp, $username]); } catch (Exception $e) {}
+                try { $pdo->exec('DELETE FROM login_attempts WHERE attempted_at < (NOW() - INTERVAL 1 DAY)'); } catch (Exception $e) {}
                 $remaining = $LOGIN_MAX_ATTEMPTS - $recentFails - 1;
                 $error = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
                 if ($remaining <= 2 && $remaining >= 0) {

@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Update status */
         if ($postAction === 'update_status') {
+            requirePermission('admissions', 'edit');
             $aid    = (int)(isset($_POST['admission_id']) ? $_POST['admission_id'] : 0);
             $status = sanitize(isset($_POST['status'])      ? $_POST['status']      : '');
             $note   = sanitize(isset($_POST['admin_note'])  ? $_POST['admin_note']  : '');
@@ -109,6 +110,7 @@ $sumMap['total'] = array_sum($sumMap);
 
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('admissions', 'delete');
+$canInsert = hasPermission('admissions', 'insert');
 $canEdit = hasPermission('admissions', 'edit');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 
@@ -219,20 +221,24 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
               <a href="<?php echo BASE_URL; ?>/admin/views/admissions.php?action=view&id=<?php echo (int)$adm['id']; ?>"
                  class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-eye-fill"></i> দেখুন</a>
               <?php if ($adm['status'] === 'pending' && $canEdit): ?>
-              <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি গ্রহণ করবেন?')">
+              <?php if ($canEdit): ?>
+<form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি গ্রহণ করবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="update_status"/>
                 <input type="hidden" name="admission_id" value="<?php echo (int)$adm['id']; ?>"/>
                 <input type="hidden" name="status" value="approved"/>
                 <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-semibold" title="Accept"><i class="bi bi-check-circle-fill"></i></button>
               </form>
-              <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি প্রত্যাখ্যান করবেন?')">
+<?php endif; ?>
+              <?php if ($canEdit): ?>
+<form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি প্রত্যাখ্যান করবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                 <input type="hidden" name="post_action" value="update_status"/>
                 <input type="hidden" name="admission_id" value="<?php echo (int)$adm['id']; ?>"/>
                 <input type="hidden" name="status" value="rejected"/>
                 <button type="submit" class="text-red-500 hover:text-red-700 text-xs font-semibold" title="Deny"><i class="bi bi-x-circle-fill"></i></button>
               </form>
+<?php endif; ?>
               <?php endif; ?>
               <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('এই আবেদনটি স্থায়ীভাবে মুছবেন?')">
@@ -414,7 +420,8 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
     <!-- Update status form -->
     <div class="admin-card p-5">
       <h2 class="text-sm font-bold text-kma-dark dark:text-white mb-4">স্ট্যাটাস পরিবর্তন করুন</h2>
-      <form method="POST" action="<?php echo BASE_URL; ?>/admin/views/admissions.php">
+      <?php if ($canEdit): ?>
+<form method="POST" action="<?php echo BASE_URL; ?>/admin/views/admissions.php">
         <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
         <input type="hidden" name="post_action" value="update_status"/>
         <input type="hidden" name="admission_id" value="<?php echo (int)$admission['id']; ?>"/>
@@ -437,6 +444,7 @@ $stLabel = ['pending'=>'অপেক্ষমাণ','approved'=>'অনুম�
           <i class="bi bi-check-lg"></i> আপডেট করুন
         </button>
       </form>
+<?php endif; ?>
     </div>
 
     <!-- Print / delete -->

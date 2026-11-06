@@ -11,6 +11,8 @@ requirePermission('gallery', 'read');
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
 $id     = isset($_GET['id'])     ? (int)$_GET['id']         : 0;
+if ($action === 'add')  { requirePermission('gallery', 'insert'); }
+if ($action === 'edit') { requirePermission('gallery', 'edit'); }
 $currentAdminPage = 'gallery';
 $pageTitle = 'গ্যালারি ব্যবস্থাপনা | KMA Admin';
 
@@ -44,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Toggle active */
         if ($pa === 'toggle') {
+            requirePermission('gallery', 'edit');
             $tid = (int)(isset($_POST['gallery_id']) ? $_POST['gallery_id'] : 0);
             if ($tid) {
                 $pdo->prepare('UPDATE gallery SET is_active = NOT is_active WHERE id=?')->execute([$tid]);
@@ -53,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Save */
         if (in_array($pa, ['add','edit'])) {
+            requirePermission('gallery', $pa === 'add' ? 'insert' : 'edit');
             $eid = (int)(isset($_POST['gallery_id']) ? $_POST['gallery_id'] : 0);
             $item = [
                 'title'       => sanitize(isset($_POST['title'])       ? $_POST['title']       : ''),
@@ -126,6 +130,8 @@ $gallery = $rows->fetchAll();
 
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('gallery', 'delete');
+$canInsert = hasPermission('gallery', 'insert');
+$canEdit = hasPermission('gallery', 'edit');
 $cats = ['general'=>'সাধারণ','event'=>'অনুষ্ঠান','sports'=>'ক্রীড়া','classroom'=>'শ্রেণিকক্ষ','ceremony'=>'অনুষ্ঠান'];
 
 require_once dirname(__DIR__) . '/includes/admin_header.php';
@@ -141,7 +147,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
     <?php endif; ?>
   </div>
   <?php if ($action === 'list'): ?>
-  <a href="?action=add" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন ছবি</a>
+  <?php if ($canInsert): ?><a href="?action=add" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন ছবি</a><?php endif; ?>
   <?php else: ?>
   <a href="<?php echo BASE_URL; ?>/admin/views/gallery.php" class="btn-outline"><i class="bi bi-arrow-left"></i> তালিকায় ফিরুন</a>
   <?php endif; ?>
@@ -170,7 +176,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 <?php if (empty($gallery)): ?>
 <div class="admin-card py-14 text-center text-kma-muted text-sm">
   <i class="bi bi-images text-4xl block mb-3 opacity-30"></i>
-  কোনো ছবি নেই। <a href="?action=add" class="text-accent font-semibold hover:underline">এখনই যোগ করুন →</a>
+  কোনো ছবি নেই। <?php if ($canInsert): ?><a href="?action=add" class="text-accent font-semibold hover:underline">এখনই যোগ করুন →</a><?php endif; ?>
 </div>
 <?php else: ?>
 
@@ -190,10 +196,10 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
            class="w-9 h-9 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors" title="দেখুন">
           <i class="bi bi-zoom-in"></i>
         </a>
-        <a href="?action=edit&id=<?php echo (int)$g['id']; ?>"
+        <?php if ($canEdit): ?><a href="?action=edit&id=<?php echo (int)$g['id']; ?>"
            class="w-9 h-9 rounded-full bg-accent/80 hover:bg-accent flex items-center justify-center text-white transition-colors" title="সম্পাদনা">
           <i class="bi bi-pencil-fill text-sm"></i>
-        </a>
+        </a><?php endif; ?>
         <?php if ($canDelete): ?>
         <form method="POST" class="inline" onsubmit="return confirm('ছবিটি মুছে ফেলবেন?')">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
@@ -216,7 +222,8 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
       <div class="flex items-center justify-between mt-1.5">
         <span class="text-[0.65rem] text-kma-muted"><?php echo h($cats[$g['category']] ?? $g['category']); ?></span>
         <!-- Toggle active -->
-        <form method="POST" class="inline">
+        <?php if ($canEdit): ?>
+<form method="POST" class="inline">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
           <input type="hidden" name="post_action" value="toggle"/>
           <input type="hidden" name="gallery_id" value="<?php echo (int)$g['id']; ?>"/>
@@ -226,6 +233,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <i class="bi <?php echo $g['is_active'] ? 'bi-eye-fill' : 'bi-eye-slash-fill'; ?>"></i>
           </button>
         </form>
+<?php endif; ?>
       </div>
     </div>
   </div>

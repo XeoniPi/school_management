@@ -134,7 +134,7 @@ $navItems = [
     <a href="<?php echo BASE_URL; ?>/index.php"
        aria-label="<?php echo h($siteName); ?> – হোম"
        class="flex items-center gap-3 py-2.5 flex-shrink-0">
-      <img src="https://placehold.co/56x56/2e6b3e/ffffff?text=KMA&font=open-sans"
+      <img src="<?php echo h(kmaLogoUrl([56, 56, '2e6b3e', 'ffffff'])); ?>"
            alt="KMA লোগো" width="56" height="56"
            class="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover border-2 border-gold" />
       <div class="leading-tight">

@@ -13,6 +13,8 @@ requirePermission('faculty', 'read');
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
 $id     = isset($_GET['id'])     ? (int)$_GET['id']         : 0;
+if ($action === 'add')  { requirePermission('faculty', 'insert'); }
+if ($action === 'edit') { requirePermission('faculty', 'edit'); }
 $currentAdminPage = 'faculty';
 $pageTitle = 'শিক্ষক ও প্রশাসন | KMA Admin';
 
@@ -61,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Toggle active */
         if ($pa === 'toggle') {
+            requirePermission('faculty', 'edit');
             $tid = (int)(isset($_POST['faculty_id']) ? $_POST['faculty_id'] : 0);
             if ($tid) {
                 $pdo->prepare('UPDATE faculty SET is_active = NOT is_active WHERE id=?')->execute([$tid]);
@@ -70,6 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Save (add / edit) */
         if (in_array($pa, ['add', 'edit'])) {
+            requirePermission('faculty', $pa === 'add' ? 'insert' : 'edit');
             $eid = (int)(isset($_POST['faculty_id']) ? $_POST['faculty_id'] : 0);
             $member = [
                 'name_bn'       => sanitize(isset($_POST['name_bn'])       ? $_POST['name_bn']       : ''),
@@ -163,6 +167,8 @@ $facultyList = $rows->fetchAll();
 
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('faculty', 'delete');
+$canInsert = hasPermission('faculty', 'insert');
+$canEdit = hasPermission('faculty', 'edit');
 require_once dirname(__DIR__) . '/includes/admin_header.php';
 ?>
 
@@ -176,7 +182,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
     <?php endif; ?>
   </div>
   <?php if ($action === 'list'): ?>
-  <a href="?action=add" class="btn-primary"><i class="bi bi-person-plus-fill"></i> নতুন সদস্য</a>
+  <?php if ($canInsert): ?><a href="?action=add" class="btn-primary"><i class="bi bi-person-plus-fill"></i> নতুন সদস্য</a><?php endif; ?>
   <?php else: ?>
   <a href="<?php echo BASE_URL; ?>/admin/views/faculty.php" class="btn-outline"><i class="bi bi-arrow-left"></i> তালিকায় ফিরুন</a>
   <?php endif; ?>
@@ -205,7 +211,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 <?php if (empty($facultyList)): ?>
 <div class="admin-card py-14 text-center text-kma-muted text-sm">
   <i class="bi bi-people text-4xl block mb-3 opacity-30"></i>
-  কোনো সদস্য নেই। <a href="?action=add" class="text-accent font-semibold hover:underline">এখনই যোগ করুন →</a>
+  কোনো সদস্য নেই। <?php if ($canInsert): ?><a href="?action=add" class="text-accent font-semibold hover:underline">এখনই যোগ করুন →</a><?php endif; ?>
 </div>
 <?php else: ?>
 
@@ -222,10 +228,10 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
       <div class="w-full h-full flex items-center justify-center text-5xl text-kma-border"><i class="bi bi-person-fill"></i></div>
       <?php endif; ?>
       <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-        <a href="?action=edit&id=<?php echo (int)$m['id']; ?>"
+        <?php if ($canEdit): ?><a href="?action=edit&id=<?php echo (int)$m['id']; ?>"
            class="w-9 h-9 rounded-full bg-accent/80 hover:bg-accent flex items-center justify-center text-white transition-colors" title="সম্পাদনা">
           <i class="bi bi-pencil-fill text-sm"></i>
-        </a>
+        </a><?php endif; ?>
         <?php if ($canDelete): ?>
         <form method="POST" class="inline" onsubmit="return confirm('এই সদস্যকে মুছে ফেলবেন?')">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
@@ -248,7 +254,8 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
         <span class="text-[0.6rem] font-bold px-1.5 py-0.5 rounded <?php echo h($catColor[$m['category']] ?? 'bg-gray-100 text-gray-600'); ?>">
           <?php echo h($categories[$m['category']] ?? $m['category']); ?>
         </span>
-        <form method="POST" class="inline">
+        <?php if ($canEdit): ?>
+<form method="POST" class="inline">
           <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
           <input type="hidden" name="post_action" value="toggle"/>
           <input type="hidden" name="faculty_id" value="<?php echo (int)$m['id']; ?>"/>
@@ -258,6 +265,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
             <i class="bi <?php echo $m['is_active'] ? 'bi-eye-fill' : 'bi-eye-slash-fill'; ?>"></i>
           </button>
         </form>
+<?php endif; ?>
       </div>
     </div>
   </div>

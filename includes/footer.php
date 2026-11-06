@@ -39,7 +39,7 @@ $acadLinks = [
 
       <!-- Brand col -->
       <div>
-        <img src="https://placehold.co/60x60/2e6b3e/ffffff?text=KMA&font=open-sans"
+        <img src="<?php echo h(kmaLogoUrl([60, 60, '2e6b3e', 'ffffff'])); ?>"
              alt="KMA লোগো" width="60" height="60" loading="lazy"
              class="rounded-full border-2 border-gold mb-4" />
         <div class="mb-3">

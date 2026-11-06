@@ -11,6 +11,8 @@ requirePermission('holidays', 'read');
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
 $id     = isset($_GET['id'])     ? (int)$_GET['id']         : 0;
+if ($action === 'add')  { requirePermission('holidays', 'insert'); }
+if ($action === 'edit') { requirePermission('holidays', 'edit'); }
 $currentAdminPage = 'holidays';
 $pageTitle = 'ছুটির তালিকা | KMA Admin';
 
@@ -35,17 +37,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (in_array($postAction, ['add','edit'])) {
+            requirePermission('holidays', $postAction === 'add' ? 'insert' : 'edit');
             $holiday = [
                 'title'       => sanitize(isset($_POST['title'])       ? $_POST['title']       : ''),
                 'description' => sanitize(isset($_POST['description']) ? $_POST['description'] : ''),
                 'type'        => sanitize(isset($_POST['type'])        ? $_POST['type']        : 'govt'),
                 'start_date'  => sanitize(isset($_POST['start_date'])  ? $_POST['start_date']  : ''),
                 'end_date'    => sanitize(isset($_POST['end_date'])    ? $_POST['end_date']    : ''),
-                'duration'    => sanitize(isset($_POST['duration'])    ? $_POST['duration']    : ''),
-                'year'        => (int)(isset($_POST['year'])           ? $_POST['year']        : date('Y')),
+                'duration'    => '', /* computed from the dates below */
+                'year'        => (int)date('Y'), /* always the current year; never taken from the form */
                 'is_active'   => isset($_POST['is_active']) ? 1 : 0,
             ];
             $eid = (int)(isset($_POST['holiday_id']) ? $_POST['holiday_id'] : 0);
+
+            $holiday['id'] = $eid;
+            if ($postAction === 'edit') {
+                /* An existing holiday keeps its original year — it cannot be moved to another year */
+                $yq = $pdo->prepare('SELECT year FROM holidays WHERE id=?');
+                $yq->execute([$eid]);
+                $yr = $yq->fetchColumn();
+                if ($yr === false) { $errors[] = 'ছুটিটি পাওয়া যায়নি।'; } else { $holiday['year'] = (int)$yr; }
+            }
+            $sd = DateTime::createFromFormat('Y-m-d', $holiday['start_date']);
+            $ed = $holiday['end_date'] !== '' ? DateTime::createFromFormat('Y-m-d', $holiday['end_date']) : null;
+            if ($holiday['start_date'] !== '') {
+                if (!$sd || $sd->format('Y-m-d') !== $holiday['start_date']) { $errors[] = 'সঠিক শুরুর তারিখ দিন।'; $sd = null; }
+                elseif ((int)$sd->format('Y') !== (int)$holiday['year']) { $errors[] = 'শুরুর তারিখ অবশ্যই ' . $holiday['year'] . ' সালের মধ্যে হতে হবে।'; }
+            }
+            if ($holiday['end_date'] !== '') {
+                if (!$ed || $ed->format('Y-m-d') !== $holiday['end_date']) { $errors[] = 'সঠিক শেষ তারিখ দিন।'; $ed = null; }
+                elseif ($sd && $ed < $sd) { $errors[] = 'শেষ তারিখ শুরুর তারিখের আগে হতে পারে না।'; }
+            }
+            /* মেয়াদ = number of days from start to end (inclusive), in Bengali digits */
+            $holiday['duration'] = '';
+            if ($sd) {
+                $days = ($ed && $ed >= $sd) ? $sd->diff($ed)->days + 1 : 1;
+                $holiday['duration'] = strtr((string)$days, ['0'=>'০','1'=>'১','2'=>'২','3'=>'৩','4'=>'৪','5'=>'৫','6'=>'৬','7'=>'৭','8'=>'৮','9'=>'৯']) . ' দিন';
+            }
 
             if (mb_strlen($holiday['title']) < 2) { $errors[] = 'শিরোনাম লিখুন।'; }
             if (empty($holiday['start_date']))     { $errors[] = 'শুরুর তারিখ দিন।'; }
@@ -91,8 +119,17 @@ $rows = $pdo->prepare("SELECT * FROM holidays $where ORDER BY start_date ASC");
 $rows->execute($params);
 $holidays = $rows->fetchAll();
 
+/* Years that actually have holidays stored, plus the current year (so it is always there) */
+$yearOptions = [];
+try { $yearOptions = array_map('intval', $pdo->query('SELECT DISTINCT year FROM holidays ORDER BY year DESC')->fetchAll(PDO::FETCH_COLUMN)); } catch (Exception $e) {}
+$yearOptions[] = (int)date('Y');
+$yearOptions[] = (int)$year;
+$yearOptions = array_values(array_unique($yearOptions));
+rsort($yearOptions);
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('holidays', 'delete');
+$canInsert = hasPermission('holidays', 'insert');
+$canEdit = hasPermission('holidays', 'edit');
 $types = ['govt'=>'সরকারি ছুটি','school'=>'বিদ্যালয় ছুটি','exam'=>'পরীক্ষা','event'=>'বিশেষ অনুষ্ঠান'];
 $typeBadge = ['govt'=>'bg-red-100 text-red-700','school'=>'bg-green-100 text-green-700','exam'=>'bg-yellow-100 text-yellow-700','event'=>'bg-purple-100 text-purple-700'];
 require_once dirname(__DIR__) . '/includes/admin_header.php';
@@ -103,7 +140,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
     <?php echo $action==='list' ? 'ছুটির তালিকা' : ($action==='add' ? 'নতুন ছুটি যোগ' : 'ছুটি সম্পাদনা'); ?>
   </h1>
   <?php if ($action === 'list'): ?>
-  <a href="?action=add" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন ছুটি</a>
+  <?php if ($canInsert): ?><a href="?action=add" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন ছুটি</a><?php endif; ?>
   <?php else: ?>
   <a href="<?php echo BASE_URL; ?>/admin/views/holidays.php" class="btn-outline"><i class="bi bi-arrow-left"></i> তালিকায় ফিরুন</a>
   <?php endif; ?>
@@ -116,13 +153,15 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 
 <!-- Year + type filter -->
 <div class="flex flex-wrap gap-2 mb-4">
-  <?php for ($y = (int)date('Y')-1; $y <= (int)date('Y')+1; $y++): ?>
-  <a href="?year=<?php echo $y; ?><?php echo $type?'&type='.urlencode($type):''; ?>"
-     class="text-xs font-bold px-3 py-1.5 rounded-full border transition-colors
-            <?php echo $year===$y ? 'bg-accent text-white border-accent' : 'bg-white dark:bg-gray-700 border-kma-border text-kma-muted hover:border-accent hover:text-accent'; ?>">
-    <?php echo $y; ?>
-  </a>
-  <?php endfor; ?>
+  <form method="GET" class="inline-flex items-center gap-2">
+    <?php if ($type): ?><input type="hidden" name="type" value="<?php echo h($type); ?>"/><?php endif; ?>
+    <label class="text-xs font-bold text-kma-muted" for="yearFilter"><i class="bi bi-calendar3"></i> বছর</label>
+    <select id="yearFilter" name="year" class="form-input admin-year-select" data-auto-submit>
+      <?php foreach ($yearOptions as $yo): ?>
+      <option value="<?php echo (int)$yo; ?>" <?php echo $year===(int)$yo ? 'selected' : ''; ?>><?php echo (int)$yo; ?><?php echo (int)$yo===(int)date('Y') ? ' (চলতি)' : ''; ?></option>
+      <?php endforeach; ?>
+    </select>
+  </form>
   <span class="border-l border-kma-border mx-1"></span>
   <a href="?year=<?php echo $year; ?>" class="text-xs font-bold px-3 py-1.5 rounded-full border transition-colors <?php echo $type==='' ? 'bg-kma-dark text-white border-kma-dark' : 'bg-white dark:bg-gray-700 border-kma-border text-kma-muted hover:border-accent hover:text-accent'; ?>">সব</a>
   <?php foreach ($types as $tv => $tl): ?>
@@ -158,7 +197,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td><span class="badge <?php echo $h2['is_active'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'; ?>"><?php echo $h2['is_active'] ? 'সক্রিয়' : 'নিষ্ক্রিয়'; ?></span></td>
           <td>
             <div class="flex gap-2">
-              <a href="?action=edit&id=<?php echo (int)$h2['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canEdit): ?><a href="?action=edit&id=<?php echo (int)$h2['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a><?php endif; ?>
               <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
@@ -200,24 +239,21 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
       </select>
     </div>
     <div>
+      <?php $formYear = ($action==='edit' && !empty($holiday['year'])) ? (int)$holiday['year'] : (int)date('Y'); ?>
       <label class="form-label">বছর</label>
-      <select name="year" class="form-input">
-        <?php for ($y=(int)date('Y')-1;$y<=(int)date('Y')+1;$y++): ?>
-        <option value="<?php echo $y; ?>" <?php echo ((int)($holiday['year']??date('Y')))===$y?'selected':''; ?>><?php echo $y; ?></option>
-        <?php endfor; ?>
-      </select>
+      <input type="text" class="form-input" value="<?php echo $formYear; ?>" readonly/>
     </div>
     <div>
       <label class="form-label">শুরুর তারিখ <span class="text-red-500">*</span></label>
-      <input type="date" name="start_date" class="form-input" required value="<?php echo h($holiday['start_date']); ?>"/>
+      <input type="date" id="holStart" name="start_date" class="form-input" required min="<?php echo $formYear; ?>-01-01" max="<?php echo $formYear; ?>-12-31" value="<?php echo h($holiday['start_date']); ?>"/>
     </div>
     <div>
       <label class="form-label">শেষ তারিখ (ঐচ্ছিক)</label>
-      <input type="date" name="end_date" class="form-input" value="<?php echo h($holiday['end_date']??''); ?>"/>
+      <input type="date" id="holEnd" name="end_date" class="form-input" value="<?php echo h($holiday['end_date']??''); ?>"/>
     </div>
     <div>
-      <label class="form-label">মেয়াদ (যেমন: ৩ দিন)</label>
-      <input type="text" name="duration" class="form-input" value="<?php echo h($holiday['duration']??''); ?>" placeholder="যেমন: ১ দিন, ৩ দিন"/>
+      <label class="form-label">মেয়াদ (স্বয়ংক্রিয়)</label>
+      <input type="text" id="holDuration" class="form-input" value="<?php echo h($holiday['duration']??''); ?>" placeholder="তারিখ দিলে নিজে থেকে বসবে" readonly/>
     </div>
     <div class="flex items-center mt-5">
       <label class="flex items-center gap-2 cursor-pointer">
@@ -238,4 +274,5 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 </form>
 <?php endif; ?>
 
+<script src="<?php echo BASE_URL; ?>/assets/js/admin-holidays.js"></script>
 <?php require_once dirname(__DIR__) . '/includes/admin_footer.php'; ?>

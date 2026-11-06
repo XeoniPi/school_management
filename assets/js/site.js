@@ -337,8 +337,13 @@
   ───────────────────────────────────────── */
   function initClsTabs(tabAttr, panelIdPrefix) {
     var tabs   = document.querySelectorAll('.cls-tab[' + tabAttr + ']');
-    var panels = document.querySelectorAll('.class-panel, .cls-panel');
-    if (!tabs.length) { return; }
+    /* Only operate on panels belonging to THIS prefix group. Without this
+       guard, the 3 calls (cls-/r-/s-) all wired the same tab buttons and
+       each click cleared the 'show' class set by the correct handler. */
+    var panels = document.querySelectorAll(
+      '.class-panel[id^="' + panelIdPrefix + '"], .cls-panel[id^="' + panelIdPrefix + '"]'
+    );
+    if (!tabs.length || !panels.length) { return; }
 
     var storageKey = 'kma_tab_' + panelIdPrefix + '_' + location.pathname;
 

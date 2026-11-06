@@ -98,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $canInsert = isset($_POST['perm'][$m]['insert']) ? 1 : 0;
                     $canEdit   = isset($_POST['perm'][$m]['edit'])   ? 1 : 0;
                     $canDelete = 0; /* accounts/moderator can NEVER delete — enforced regardless of this form */
+                    if ($canInsert || $canEdit) { $canRead = 1; } /* cannot add/edit what you cannot view */
                     $stmt->execute([$tid, $m, $canRead, $canInsert, $canEdit, $canDelete]);
                 }
                 header('Location: ' . BASE_URL . '/admin/views/users.php?flash=' . urlencode('Permissions updated.')); exit;

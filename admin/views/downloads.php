@@ -11,6 +11,8 @@ requirePermission('downloads', 'read');
 $pdo    = getDB();
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
 $id     = isset($_GET['id'])     ? (int)$_GET['id']         : 0;
+if ($action === 'add')  { requirePermission('downloads', 'insert'); }
+if ($action === 'edit') { requirePermission('downloads', 'edit'); }
 $currentAdminPage = 'downloads';
 $pageTitle = 'ডাউনলোড ব্যবস্থাপনা | KMA Admin';
 
@@ -42,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (in_array($pa, ['add','edit'])) {
+            requirePermission('downloads', $pa === 'add' ? 'insert' : 'edit');
             $eid = (int)(isset($_POST['dl_id']) ? $_POST['dl_id'] : 0);
             $dl = [
                 'title'       => sanitize(isset($_POST['title'])       ? $_POST['title']       : ''),
@@ -133,6 +136,8 @@ $classes = $pdo->query('SELECT id,class_name FROM classes WHERE is_active=1 ORDE
 
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('downloads', 'delete');
+$canInsert = hasPermission('downloads', 'insert');
+$canEdit = hasPermission('downloads', 'edit');
 $cats = ['routine'=>'ক্লাস রুটিন','syllabus'=>'সিলেবাস','exam_schedule'=>'পরীক্ষার সময়সূচি','holiday'=>'ছুটির তালিকা','other'=>'অন্যান্য'];
 $catBadge = ['routine'=>'bg-blue-100 text-blue-700','syllabus'=>'bg-gold/20 text-yellow-700','exam_schedule'=>'bg-purple-100 text-purple-700','holiday'=>'bg-green-100 text-green-700','other'=>'bg-gray-100 text-gray-600'];
 
@@ -144,7 +149,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
     <?php echo $action==='list' ? 'ডাউনলোড ফাইল' : ($action==='add' ? 'নতুন ফাইল আপলোড' : 'ফাইল সম্পাদনা'); ?>
   </h1>
   <?php if ($action === 'list'): ?>
-  <a href="?action=add" class="btn-primary"><i class="bi bi-upload"></i> নতুন ফাইল</a>
+  <?php if ($canInsert): ?><a href="?action=add" class="btn-primary"><i class="bi bi-upload"></i> নতুন ফাইল</a><?php endif; ?>
   <?php else: ?>
   <a href="<?php echo BASE_URL; ?>/admin/views/downloads.php" class="btn-outline"><i class="bi bi-arrow-left"></i> তালিকায় ফিরুন</a>
   <?php endif; ?>
@@ -194,7 +199,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td>
             <div class="flex items-center gap-2">
               <a href="<?php echo UPLOAD_PDFS_URL . h($d['file_path']); ?>" target="_blank" class="text-blue-500 hover:text-blue-700 text-xs" title="দেখুন"><i class="bi bi-eye-fill"></i></a>
-              <a href="?action=edit&id=<?php echo (int)$d['id']; ?>" class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canEdit): ?><a href="?action=edit&id=<?php echo (int)$d['id']; ?>" class="text-accent hover:underline text-xs font-semibold"><i class="bi bi-pencil-fill"></i></a><?php endif; ?>
               <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('ফাইলটি মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>

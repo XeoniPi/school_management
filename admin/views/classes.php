@@ -12,6 +12,8 @@ $pdo    = getDB();
 $tab    = isset($_GET['tab'])    ? sanitize($_GET['tab'])    : 'classes';
 $action = isset($_GET['action']) ? sanitize($_GET['action']) : 'list';
 $id     = isset($_GET['id'])     ? (int)$_GET['id']         : 0;
+if (in_array($action, ['add_class','add_subject'], true)) { requirePermission('classes', 'insert'); }
+if (in_array($action, ['edit_class','edit_subject'], true)) { requirePermission('classes', 'edit'); }
 $currentAdminPage = 'classes';
 $pageTitle = 'শ্রেণি ও বিষয় | KMA Admin';
 
@@ -39,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (in_array($pa, ['add_class','edit_class'])) {
+            requirePermission('classes', $pa === 'add_class' ? 'insert' : 'edit');
             $cls = [
                 'class_key'    => sanitize(isset($_POST['class_key'])    ? $_POST['class_key']    : ''),
                 'class_name'   => sanitize(isset($_POST['class_name'])   ? $_POST['class_name']   : ''),
@@ -73,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (in_array($pa, ['add_subject','edit_subject'])) {
+            requirePermission('classes', $pa === 'add_subject' ? 'insert' : 'edit');
             $subj = [
                 'name_bn'     => sanitize(isset($_POST['name_bn'])     ? $_POST['name_bn']     : ''),
                 'name_en'     => sanitize(isset($_POST['name_en'])     ? $_POST['name_en']     : ''),
@@ -112,10 +116,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* ── CLASS-SUBJECT ASSIGNMENT ── */
         if ($pa === 'assign_subject') {
+            requirePermission('classes', 'insert');
             $classId   = (int)(isset($_POST['class_id'])   ? $_POST['class_id']   : 0);
             $subjectId = (int)(isset($_POST['subject_id']) ? $_POST['subject_id'] : 0);
             $teacher   = sanitize(isset($_POST['teacher_name']) ? $_POST['teacher_name'] : '');
             $sortOrd   = (int)(isset($_POST['sort_order']) ? $_POST['sort_order'] : 0);
+            $flashType = 'success';
+            if ($teacher !== '') {
+                $tchk = $pdo->prepare("SELECT COUNT(*) FROM faculty WHERE category='teacher' AND is_active=1 AND name_bn=?");
+                $tchk->execute([$teacher]);
+                if ((int)$tchk->fetchColumn() === 0) {
+                    $flash = 'নির্বাচিত শিক্ষক শিক্ষকমণ্ডলীর তালিকায় পাওয়া যায়নি।';
+                    $flashType = 'error';
+                    $classId = 0; /* skip saving */
+                }
+            }
             if ($classId && $subjectId) {
                 /* Upsert */
                 $chk = $pdo->prepare('SELECT id FROM class_subjects WHERE class_id=? AND subject_id=?');
@@ -127,10 +142,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $flash = 'বিষয় নির্ধারণ করা হয়েছে।';
             }
-            header('Location: ' . BASE_URL . '/admin/views/classes.php?tab=assign&flash=' . urlencode($flash)); exit;
+            header('Location: ' . BASE_URL . '/admin/views/classes.php?tab=assign&class_id=' . (int)(isset($_POST['class_id']) ? $_POST['class_id'] : 0) . '&flashType=' . $flashType . '&flash=' . urlencode($flash)); exit;
         }
 
         if ($pa === 'remove_assignment') {
+            requirePermission('classes', 'delete');
             $classId   = (int)(isset($_POST['class_id'])   ? $_POST['class_id']   : 0);
             $subjectId = (int)(isset($_POST['subject_id']) ? $_POST['subject_id'] : 0);
             if ($classId && $subjectId) {
@@ -142,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if (!empty($_GET['flash'])) { $flash = sanitize($_GET['flash']); }
+if (!empty($_GET['flash'])) { $flash = sanitize($_GET['flash']); if (isset($_GET['flashType']) && $_GET['flashType'] === 'error') { $flashType = 'error'; } }
 
 /* Load for edit */
 if ($action === 'edit_class' && $id) {
@@ -187,8 +203,15 @@ if ($tab === 'assign' && $assignClassId) {
     }
 }
 
+$teacherNames = [];
+try {
+    $teacherNames = $pdo->query("SELECT name_bn FROM faculty WHERE category='teacher' AND is_active=1 ORDER BY sort_order ASC, name_bn ASC")->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) { error_log('classes.php teacher list error: ' . $e->getMessage()); }
+
 $csrf = generateCsrfToken();
 $canDelete = hasPermission('classes', 'delete');
+$canInsert = hasPermission('classes', 'insert');
+$canEdit = hasPermission('classes', 'edit');
 $subjectTypes  = ['core'=>'মূল বিষয়','religion'=>'ধর্ম','extra'=>'সহশিক্ষা','optional'=>'ঐচ্ছিক'];
 $colorClasses  = ['s-bn'=>'বাংলা (নীল)','s-en'=>'ইংরেজি (সবুজ)','s-math'=>'গণিত (হলুদ)','s-sci'=>'বিজ্ঞান (বেগুনি)','s-soc'=>'সমাজ (কমলা)','s-rel'=>'ধর্ম (গোলাপি)','s-ict'=>'ICT (নীল)','s-art'=>'শিল্পকলা','s-pe'=>'শারীরিক শিক্ষা'];
 $typeBadge = ['core'=>'bg-blue-100 text-blue-700','religion'=>'bg-yellow-100 text-yellow-700','extra'=>'bg-green-100 text-green-700','optional'=>'bg-gray-100 text-gray-600'];
@@ -274,7 +297,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 <?php else: ?>
 
 <div class="flex justify-end mb-3">
-  <a href="?tab=classes&action=add_class" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন শ্রেণি</a>
+  <?php if ($canInsert): ?><a href="?tab=classes&action=add_class" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন শ্রেণি</a><?php endif; ?>
 </div>
 <div class="admin-card overflow-hidden">
   <?php if (empty($classes)): ?>
@@ -294,7 +317,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td><span class="badge <?php echo $c['is_active'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'; ?>"><?php echo $c['is_active']?'সক্রিয়':'নিষ্ক্রিয়'; ?></span></td>
           <td>
             <div class="flex gap-2">
-              <a href="?tab=classes&action=edit_class&id=<?php echo (int)$c['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canEdit): ?><a href="?tab=classes&action=edit_class&id=<?php echo (int)$c['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a><?php endif; ?>
               <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('শ্রেণিটি নিষ্ক্রিয় করবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
@@ -370,7 +393,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
 <?php else: ?>
 
 <div class="flex justify-end mb-3">
-  <a href="?tab=subjects&action=add_subject" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন বিষয়</a>
+  <?php if ($canInsert): ?><a href="?tab=subjects&action=add_subject" class="btn-primary"><i class="bi bi-plus-lg"></i> নতুন বিষয়</a><?php endif; ?>
 </div>
 <div class="admin-card overflow-hidden">
   <?php if (empty($subjects)): ?>
@@ -393,7 +416,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           <td><span class="badge <?php echo $s['is_active'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'; ?>"><?php echo $s['is_active']?'সক্রিয়':'নিষ্ক্রিয়'; ?></span></td>
           <td>
             <div class="flex gap-2">
-              <a href="?tab=subjects&action=edit_subject&id=<?php echo (int)$s['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a>
+              <?php if ($canEdit): ?><a href="?tab=subjects&action=edit_subject&id=<?php echo (int)$s['id']; ?>" class="text-accent text-xs font-semibold hover:underline"><i class="bi bi-pencil-fill"></i></a><?php endif; ?>
               <?php if ($canDelete): ?>
               <form method="POST" class="inline" onsubmit="return confirm('বিষয়টি মুছে ফেলবেন?')">
                 <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
@@ -452,7 +475,8 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
     <!-- Add subject form -->
     <div class="admin-card p-5">
       <h2 class="text-sm font-bold text-kma-dark dark:text-white mb-4">বিষয় যোগ করুন</h2>
-      <form method="POST" action="<?php echo BASE_URL; ?>/admin/views/classes.php?tab=assign&class_id=<?php echo $assignClassId; ?>">
+      <?php if ($canInsert): ?>
+<form method="POST" action="<?php echo BASE_URL; ?>/admin/views/classes.php?tab=assign&class_id=<?php echo $assignClassId; ?>">
         <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
         <input type="hidden" name="post_action" value="assign_subject"/>
         <input type="hidden" name="class_id" value="<?php echo $assignClassId; ?>"/>
@@ -474,7 +498,15 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
           </div>
           <div>
             <label class="form-label">শিক্ষকের নাম</label>
-            <input type="text" name="teacher_name" class="form-input" placeholder="শিক্ষকের নাম"/>
+            <select name="teacher_name" class="form-input">
+              <option value="">— শিক্ষক নির্বাচন করুন (ঐচ্ছিক) —</option>
+              <?php foreach ($teacherNames as $tn): ?>
+              <option value="<?php echo h($tn); ?>"><?php echo h($tn); ?></option>
+              <?php endforeach; ?>
+            </select>
+            <?php if (empty($teacherNames)): ?>
+            <p class="text-xs text-kma-muted mt-1">আগে "শিক্ষক ও প্রশাসন" থেকে শিক্ষকমণ্ডলী ক্যাটাগরিতে শিক্ষক যোগ করুন।</p>
+            <?php endif; ?>
           </div>
           <div>
             <label class="form-label">ক্রম</label>
@@ -483,6 +515,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
         </div>
         <button type="submit" class="btn-primary mt-3 text-sm"><i class="bi bi-plus-lg"></i> বিষয় যোগ করুন</button>
       </form>
+<?php endif; ?>
     </div>
 
     <!-- Assigned subjects -->
@@ -512,7 +545,8 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
               <td><span class="badge <?php echo h($tb); ?>"><?php echo h($tl); ?></span></td>
               <td class="text-xs text-kma-muted"><?php echo h($as['teacher_name'] ?: '—'); ?></td>
               <td>
-                <form method="POST" class="inline" onsubmit="return confirm('এই বিষয়টি সরিয়ে দেবেন?')">
+                <?php if ($canDelete): ?>
+<form method="POST" class="inline" onsubmit="return confirm('এই বিষয়টি সরিয়ে দেবেন?')">
                   <input type="hidden" name="csrf_token" value="<?php echo h($csrf); ?>"/>
                   <input type="hidden" name="post_action" value="remove_assignment"/>
                   <input type="hidden" name="class_id" value="<?php echo $assignClassId; ?>"/>
@@ -521,6 +555,7 @@ require_once dirname(__DIR__) . '/includes/admin_header.php';
                     <i class="bi bi-x-circle-fill"></i> সরান
                   </button>
                 </form>
+<?php endif; ?>
               </td>
             </tr>
             <?php endforeach; ?>

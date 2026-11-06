@@ -54,7 +54,12 @@ function renderInvoiceCopy($copyLabel, $tx, $partyName, $catLabels, $schoolBn, $
     <div class="inv-copy">
       <div class="inv-head">
         <div class="inv-brand">
+          <?php $invLogo = kmaUploadedLogoUrl(); ?>
+          <?php if ($invLogo !== ''): ?>
+          <img src="<?php echo h($invLogo); ?>" alt="Logo" class="inv-logo-img">
+          <?php else: ?>
           <div class="inv-logo">KMA</div>
+          <?php endif; ?>
           <div>
             <div class="inv-school-bn"><?php echo h($schoolBn); ?></div>
             <div class="inv-school-en"><?php echo h($schoolEn); ?></div>

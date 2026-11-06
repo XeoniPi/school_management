@@ -29,6 +29,10 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', 1);
     ini_set('session.use_only_cookies', 1);
     ini_set('session.cookie_samesite', 'Strict');
+    ini_set('session.use_strict_mode', 1);
+    $kmaHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+             || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    if ($kmaHttps) { ini_set('session.cookie_secure', 1); } /* cookie never sent over plain HTTP once live on SSL */
     session_start();
 }
 
@@ -170,6 +174,31 @@ function kmaCaptchaVerify($submitted)
     unset($_SESSION['kma_captcha_answer']);
     if ($expected === null) { return false; }
     return ((int)$submitted) === $expected;
+}
+
+/**
+ * Returns the URL of the school logo. If a logo was uploaded from
+ * Admin → Settings (stored as site_settings.logo_path) and the file
+ * exists, that is used (with a ?v=mtime cache-buster so a replaced logo
+ * shows immediately). Otherwise falls back to a generated placeholder.
+ * $placeholder = [width, height, bgHex, fgHex]
+ */
+function kmaUploadedLogoUrl()
+{
+    $site = getSiteSettings();
+    $rel  = isset($site['logo_path']) ? ltrim($site['logo_path'], '/') : '';
+    if ($rel !== '' && is_file(BASE_PATH . '/' . $rel)) {
+        return BASE_URL . '/' . $rel . '?v=' . filemtime(BASE_PATH . '/' . $rel);
+    }
+    return '';
+}
+
+function kmaLogoUrl(array $placeholder = [56, 56, '2e6b3e', 'ffffff'])
+{
+    $uploaded = kmaUploadedLogoUrl();
+    if ($uploaded !== '') { return $uploaded; }
+    return 'https://placehold.co/' . (int)$placeholder[0] . 'x' . (int)$placeholder[1]
+         . '/' . $placeholder[2] . '/' . $placeholder[3] . '?text=KMA&font=open-sans';
 }
 
 function generateAppNo()
